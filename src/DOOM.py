@@ -1437,7 +1437,7 @@ def main():
     while True:
         c = choose("DOOM EVO", ["START GAME", "LEVEL SELECT", "SETTINGS",
                                 "HOW TO PLAY", "QUIT"], sel,
-                   "CALCULATOR EDITION")
+                   "Made by Ravi Dave")
         if c >= 0:
             sel = c
         if c == 0:

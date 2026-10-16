@@ -443,8 +443,6 @@ def project(x, y):
         return None
     return pd, sx
 
-
-# ======================= DRAWING =======================
 def cls():
     draw.set_color(0, 0, 0)
     draw.fill_rect(0, 0, W, H)

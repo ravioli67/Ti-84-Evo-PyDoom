@@ -95,14 +95,7 @@ WSPR = [
 ]
 WFLASH = [132, 118, 112, 100]
 
-# ======================= LEVELS =======================
-# map chars: 0 floor, 1-4 walls, ~ acid, E exit
-#   Y/R/B yellow/red/blue door   G gate (opened by a switch)   W switch
-#   a/b/c/d secret wall that looks like wall 1/2/3/4 (press USE on it)
-# level = name, map, (x, y, angle), enemies (x, y, type),
-#         pickups (x, y, type), theme (sky, floor, near floor), objective
-# pickups: H health, V armor, A bullets, B shells, X rockets,
-#          y/r/b keys, S shotgun, C chaingun, R rocket launcher
+# levels
 LEVELS = [
     ("HANGAR", [
         "111111111111",
@@ -216,7 +209,7 @@ LEVELS = [
      "KILL THE BARON, REACH THE EXIT")
 ]
 
-# ======================= STATE =======================
+# variables x1
 qual = 1
 diff = 1
 turn_i = 2
@@ -383,8 +376,6 @@ def can_stand(x, y):
 
 
 def cast(dx, dy):
-    # DDA raycast from the player. (dx, dy) must be a unit vector.
-    # Returns (distance, side, tile id, position along the wall 0..1)
     if -0.00001 < dx < 0.00001:
         dx = 0.00001
     if -0.00001 < dy < 0.00001:
@@ -1677,10 +1668,7 @@ def level_done(n, last):
         if k == K_ENTER or k == K_BACK:
             return
 
-
-# ======================= MAIN LOOPS =======================
 def play_level():
-    # returns 0 = quit to menu, 1 = died, 2 = reached exit
     global frame, shoot_flash, hurt, message, msg_t, moving, fire_cd
     global cruise, strafe, acid, acid_t, health
 

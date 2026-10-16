@@ -19,10 +19,11 @@ K_DOWN = 34
 K_LEFT = 24
 K_RIGHT = 26
 
-# Remappable keys (SETTINGS > CONTROLS): shoot, use door, next weapon
-DEF_KEYS = [21, 105, 22]
-KEYS = [21, 105, 22]
-KN = ["SHOOT", "USE DOOR", "NEXT WEAPON"]
+# Remappable keys (SETTINGS > CONTROLS): shoot, use, next weapon, turn/strafe
+DEF_KEYS = [21, 105, 22, 23]
+KEYS = [21, 105, 22, 23]
+KN = ["SHOOT", "USE", "NEXT WEAPON", "TURN/STRAFE"]
+KC = ["YELLOW", "RED", "BLUE"]
 
 QUAL = [(40, 8), (53, 6), (80, 4)]
 QN = ["LOW", "MED", "HIGH"]
@@ -32,26 +33,44 @@ SPDM = [0.8, 1.0, 1.2]
 TURN = [0.04, 0.055, 0.075, 0.1, 0.13]
 AMAX = [99, 40, 20]
 
-# wall id -> colour percentages (1 brick, 2 tech, 3 hell, 4 slime, 5 door)
-WRGB = [None, (100, 75, 50), (50, 65, 100), (100, 35, 30),
-        (40, 90, 50), (100, 67, 12)]
+# tile ids: 1-4 walls, 5/6/7 yellow/red/blue door, 8 gate, 9 switch,
+# 10 used switch, 11-14 secret walls that look like walls 1-4
+WRGB = [None, (100, 75, 50), (50, 65, 100), (100, 35, 30), (40, 90, 50),
+        (100, 67, 12), (100, 15, 15), (15, 35, 100), (45, 50, 60),
+        (100, 20, 20), (20, 100, 30),
+        (100, 75, 50), (50, 65, 100), (100, 35, 30), (40, 90, 50)]
+# map character -> tile id
+MC = {"1": 1, "2": 2, "3": 3, "4": 4, "Y": 5, "R": 6, "B": 7, "G": 8,
+      "W": 9, "a": 11, "b": 12, "c": 13, "d": 14}
+# minimap colours for doors and gates
+DCOL = {5: (220, 170, 30), 6: (220, 40, 40), 7: (60, 110, 255),
+        8: (120, 130, 150)}
 
-# pickup colours
+# pickup colours (y/r/b = yellow/red/blue keys)
 PCOL = {
-    "H": (30, 255, 80), "A": (255, 210, 30), "B": (255, 140, 20),
-    "X": (255, 70, 70), "V": (80, 120, 255), "K": (60, 200, 255),
+    "H": (30, 255, 80), "A": (190, 190, 200), "B": (255, 140, 20),
+    "X": (255, 70, 70), "V": (70, 200, 190),
+    "y": (255, 230, 40), "r": (255, 40, 40), "b": (60, 120, 255),
     "S": (235, 235, 235), "C": (235, 235, 235), "R": (235, 235, 235)
 }
+PROJC = {0: (255, 150, 30), 3: (255, 60, 60), 4: (90, 255, 110)}
 
 # enemy types:
-# name, hp, speed, melee dmg, ranged dmg, range, fire delay,
-# stop distance, sprite size, body colour, head colour
+# 0 name, 1 hp, 2 speed, 3 melee dmg, 4 ranged dmg, 5 range, 6 fire delay,
+# 7 stop distance, 8 sprite size, 9 body, 10 head,
+# 11 ranged kind (0 none, 1 hitscan, 2 fireball), 12 fireball speed,
+# 13 pain chance %
 ET = [
-    ("IMP", 3, 0.030, 8, 0, 0, 0, 0.8, 34, (110, 12, 12), (160, 30, 25)),
-    ("ZOMBIE", 3, 0.022, 4, 5, 8, 60, 3.0, 34, (45, 75, 45), (100, 130, 80)),
-    ("DEMON", 10, 0.052, 14, 0, 0, 0, 0.8, 38, (140, 55, 105), (185, 85, 140)),
-    ("CACO", 14, 0.025, 6, 10, 7, 75, 2.2, 42, (170, 35, 35), (215, 70, 70)),
-    ("BARON", 45, 0.032, 18, 12, 9, 50, 2.5, 52, (30, 110, 45), (65, 165, 75))
+    ("IMP", 3, 0.030, 8, 7, 7, 80, 0.8, 34, (110, 12, 12), (160, 30, 25),
+     2, 0.09, 70),
+    ("ZOMBIE", 3, 0.022, 4, 5, 8, 60, 3.0, 34, (45, 75, 45), (100, 130, 80),
+     1, 0.0, 60),
+    ("DEMON", 10, 0.052, 14, 0, 0, 0, 0.8, 38, (140, 55, 105),
+     (185, 85, 140), 0, 0.0, 40),
+    ("CACO", 14, 0.025, 6, 10, 7, 75, 2.2, 42, (170, 35, 35), (215, 70, 70),
+     2, 0.11, 30),
+    ("BARON", 45, 0.032, 18, 12, 9, 50, 2.5, 52, (30, 110, 45), (65, 165, 75),
+     2, 0.13, 10)
 ]
 
 # weapons: name, ammo type, damage, hit radius, cooldown, auto, max targets, splash
@@ -77,9 +96,13 @@ WSPR = [
 WFLASH = [132, 118, 112, 100]
 
 # ======================= LEVELS =======================
-# map chars: 0 floor, 1-4 walls, D locked door, E exit
+# map chars: 0 floor, 1-4 walls, ~ acid, E exit
+#   Y/R/B yellow/red/blue door   G gate (opened by a switch)   W switch
+#   a/b/c/d secret wall that looks like wall 1/2/3/4 (press USE on it)
 # level = name, map, (x, y, angle), enemies (x, y, type),
 #         pickups (x, y, type), theme (sky, floor, near floor), objective
+# pickups: H health, V armor, A bullets, B shells, X rockets,
+#          y/r/b keys, S shotgun, C chaingun, R rocket launcher
 LEVELS = [
     ("HANGAR", [
         "111111111111",
@@ -90,72 +113,73 @@ LEVELS = [
         "100000100001",
         "101100100001",
         "100000000001",
-        "111111111D11",
+        "111111111Y11",
         "1000000000E1",
         "111111111111"],
      (1.5, 1.5, 0.0),
      [(7.5, 1.5, 0), (9.5, 5.5, 0), (5.5, 7.5, 0), (5.5, 9.5, 0)],
      [(3.5, 3.5, "H"), (5.5, 5.5, "A"), (8.5, 7.5, "H"), (1.5, 6.5, "A"),
-      (10.5, 4.5, "K"), (2.5, 9.5, "H")],
+      (10.5, 4.5, "y"), (2.5, 9.5, "H")],
      ((24, 28, 43), (48, 38, 31), (60, 49, 40)),
-     "FIND THE KEY, OPEN THE DOOR"),
+     "FIND THE YELLOW KEY. USE THE DOOR"),
 
     ("TOXIC PLANT", [
-        "11111111111111",
-        "10000010000001",
-        "10444010444401",
-        "10400000000401",
-        "10401111110401",
-        "10000000000001",
-        "11110111101111",
-        "10000100001001",
-        "10000100111001",
-        "1011000000D001",
-        "100000011010E1",
-        "11111111111111"],
+        "1111111111111111",
+        "1000001000000101",
+        "1044401044444101",
+        "1040000000000401",
+        "10401111111104d1",
+        "1000000~~0000001",
+        "1111011101111111",
+        "1000010000100001",
+        "1000010~~0100001",
+        "1000000~~0Y00001",
+        "10000100001000E1",
+        "1111111111111111"],
      (1.5, 1.5, 0.0),
      [(8.5, 1.5, 1), (10.5, 3.5, 0), (5.5, 5.5, 0), (7.5, 7.5, 1),
-      (2.5, 8.5, 0), (7.5, 9.5, 1), (11.5, 8.5, 2)],
-     [(12.5, 1.5, "S"), (7.5, 1.5, "K"), (1.5, 5.5, "H"), (12.5, 5.5, "V"),
-      (3.5, 7.5, "A"), (6.5, 5.5, "B"), (9.5, 9.5, "B"), (2.5, 10.5, "H"),
-      (4.5, 3.5, "A")],
+      (2.5, 8.5, 0), (7.5, 10.5, 1), (12.5, 8.5, 2), (3.5, 9.5, 0)],
+     [(7.5, 1.5, "S"), (11.5, 1.5, "y"), (1.5, 5.5, "H"), (14.5, 1.5, "V"),
+      (14.5, 2.5, "B"), (14.5, 3.5, "H"), (3.5, 7.5, "A"), (9.5, 5.5, "B"),
+      (2.5, 10.5, "H"), (4.5, 3.5, "A"), (12.5, 9.5, "H")],
      ((20, 36, 28), (36, 46, 30), (48, 60, 38)),
-     "NEW WEAPON AHEAD. FIND THE KEY"),
+     "AVOID THE ACID. A WALL HIDES A SECRET"),
 
     ("DEEP VAULT", [
         "1111111111111111",
-        "1000000110000001",
-        "1022220110222201",
+        "1000001001000001",
+        "1022222b12222201",
         "1020000000000201",
         "1020112222110201",
         "1000100000010001",
-        "1110D00000E10111",
+        "1110B00000E10111",
         "1000100000010001",
         "1020112222110201",
         "1020000000000201",
-        "1022220110222201",
-        "1000000110000001",
+        "1022222b122222R1",
+        "1000001001000001",
         "1111111111111111"],
      (1.5, 11.5, -1.57),
-     [(5.5, 1.5, 1), (6.5, 3.5, 0), (10.5, 1.5, 3), (12.5, 3.5, 2),
-      (3.5, 9.5, 1), (12.5, 9.5, 3), (10.5, 11.5, 0), (7.5, 6.5, 2),
-      (8.5, 5.5, 2)],
-     [(14.5, 1.5, "K"), (14.5, 11.5, "C"), (3.5, 3.5, "B"), (1.5, 9.5, "A"),
-      (1.5, 3.5, "H"), (14.5, 5.5, "H"), (14.5, 7.5, "V"), (3.5, 11.5, "B"),
-      (11.5, 9.5, "A")],
+     [(3.5, 1.5, 0), (6.5, 3.5, 1), (11.5, 1.5, 3), (13.5, 1.5, 1),
+      (12.5, 3.5, 2), (3.5, 9.5, 1), (11.5, 11.5, 2), (7.5, 6.5, 2),
+      (8.5, 5.5, 3)],
+     [(5.5, 1.5, "r"), (14.5, 1.5, "b"), (12.5, 11.5, "C"), (7.5, 1.5, "V"),
+      (8.5, 1.5, "B"), (7.5, 11.5, "H"), (8.5, 11.5, "A"), (1.5, 3.5, "H"),
+      (14.5, 5.5, "H"), (3.5, 3.5, "B"), (1.5, 9.5, "A"), (11.5, 9.5, "A"),
+      (3.5, 11.5, "B"), (13.5, 11.5, "A")],
      ((16, 24, 40), (30, 34, 44), (44, 50, 62)),
-     "THE VAULT HOLDS THE EXIT"),
+     "RED KEY: CHAINGUN. BLUE KEY: VAULT"),
 
     ("HELL GATE", [
         "1111111111111111",
-        "10000D000E100001",
-        "1011011111101101",
+        "10000Y000E100001",
+        "1011011W11101101",
         "1010000000000101",
-        "1010333003330101",
+        "1010333GG3330101",
         "1000300000030001",
-        "1110300000030111",
+        "1110300~~0030111",
         "1000300000030001",
-        "1010333003330101",
+        "1010333GG3330101",
         "1010000000000101",
         "1011011111101101",
         "1000000000000001",
@@ -164,28 +188,28 @@ LEVELS = [
      [(6.5, 6.5, 3), (9.5, 6.5, 3), (7.5, 3.5, 1), (3.5, 3.5, 0),
       (12.5, 3.5, 1), (3.5, 9.5, 0), (12.5, 9.5, 2), (7.5, 9.5, 2),
       (7.5, 1.5, 2)],
-     [(7.5, 5.5, "K"), (14.5, 11.5, "R"), (14.5, 1.5, "X"), (1.5, 1.5, "X"),
+     [(7.5, 5.5, "y"), (14.5, 11.5, "R"), (14.5, 1.5, "X"), (1.5, 1.5, "X"),
       (1.5, 5.5, "H"), (14.5, 5.5, "H"), (14.5, 9.5, "V"), (3.5, 7.5, "A"),
       (12.5, 7.5, "B"), (1.5, 9.5, "B"), (7.5, 11.5, "H"), (12.5, 11.5, "X")],
      ((40, 12, 12), (50, 20, 16), (66, 28, 20)),
-     "ROCKET LAUNCHER AT THE FAR END"),
+     "FIND THE SWITCH TO OPEN THE ARENA"),
 
     ("BARON'S LAIR", [
         "11111111111111",
-        "10000000000001",
+        "100000~~000001",
         "10000000000001",
         "10033000033001",
         "10030000003001",
         "10000000000001",
         "10030000003001",
         "10033000033001",
-        "10000000000001",
+        "100000~~000001",
         "100000000000E1",
         "11111111111111"],
      (1.5, 1.5, 0.7),
      [(7.5, 5.5, 4), (4.5, 8.5, 3), (10.5, 2.5, 3), (12.5, 5.5, 1),
       (1.5, 5.5, 1), (4.5, 1.5, 0), (9.5, 8.5, 0)],
-     [(6.5, 1.5, "B"), (7.5, 9.5, "X"), (1.5, 9.5, "X"), (12.5, 1.5, "X"),
+     [(5.5, 1.5, "B"), (7.5, 9.5, "X"), (1.5, 9.5, "X"), (12.5, 1.5, "X"),
       (1.5, 6.5, "H"), (12.5, 7.5, "H"), (5.5, 2.5, "A"), (8.5, 8.5, "B"),
       (12.5, 3.5, "V"), (6.5, 5.5, "H"), (3.5, 5.5, "X")],
      ((30, 8, 8), (40, 16, 12), (55, 22, 16)),
@@ -199,6 +223,8 @@ turn_i = 2
 show_map = True
 bob_on = True
 autofire = False
+move_style = 0
+strafe = False
 
 BUF = False
 try:
@@ -223,30 +249,42 @@ armor = 0
 ammo = [30, 0, 0]
 have = [True, False, False, False]
 wp = 0
+keys = [False, False, False]
 kills = 0
 tot_kills = 0
 total = 0
 frame = 0
-has_key = False
 doors_closed = 0
+gates_closed = 0
+secrets_found = 0
+secrets_total = 0
 moving = False
+cruise = False
 shoot_flash = 0
 fire_cd = 0
 hurt = 0
+acid = 0
+acid_t = 0
 message = ""
 msg_t = 0
 seed = 12345
 _pk = 0
 
 G = []
+HZ = []
+HZL = []
+DYN = []
+DF = []
+fcell = (-1, -1)
+fframe = 0
 MW = 12
 MH = 11
 STEPS = 24
 EX = 0
 EY = 0
-DOORS = []
 enemies = []
 pickups = []
+projs = []
 th = ((24, 28, 43), (48, 38, 31), (60, 49, 40))
 MM_RUNS = []
 MMC = 4
@@ -294,13 +332,24 @@ def boss_alive():
 
 
 def hint():
+    if gates_closed > 0:
+        return "FIND THE SWITCH"
     if doors_closed > 0:
-        if has_key:
+        if keys[0] or keys[1] or keys[2]:
             return "FIND THE DOOR"
-        return "FIND THE KEY"
+        return "FIND THE KEYS"
     if boss_alive():
         return "KILL THE BARON"
     return "FIND THE EXIT"
+
+
+def wake(x, y, r):
+    for e in enemies:
+        if not e[4]:
+            dx = e[0] - x
+            dy = e[1] - y
+            if dx * dx + dy * dy < r * r:
+                e[4] = True
 
 
 def apply_quality():
@@ -463,18 +512,62 @@ def draw_world():
                        shade * wc[2] // 100)
         draw.fill_rect(i * STRIP, top, STRIP, bot - top)
 
+    draw_acid()
     draw_exit()
     draw_pickups()
     draw_enemies()
+    draw_projs()
     draw_weapon()
 
     if hurt > 0:
         draw.set_color(200, 0, 0)
         draw.fill_rect(0, VIEW_TOP, 7, VIEW_BOT - VIEW_TOP)
         draw.fill_rect(W - 7, VIEW_TOP, 7, VIEW_BOT - VIEW_TOP)
+    if acid > 0:
+        draw.set_color(60, 210, 40)
+        draw.fill_rect(8, VIEW_TOP, 7, VIEW_BOT - VIEW_TOP)
+        draw.fill_rect(W - 15, VIEW_TOP, 7, VIEW_BOT - VIEW_TOP)
 
     draw_hud()
     flip()
+
+
+def draw_acid():
+    # flat green puddles on the floor
+    for hz in HZL:
+        r = project(hz[0], hz[1])
+        if r is None:
+            continue
+        pd = r[0]
+        if pd > 9:
+            continue
+        sx = r[1]
+        w = int(120 / pd)
+        if w > 300:
+            w = 300
+        il = (sx - w // 2) // STRIP
+        ir = (sx + w // 2) // STRIP
+        if il < 0:
+            il = 0
+        elif il >= RAYS:
+            il = RAYS - 1
+        if ir < 0:
+            ir = 0
+        elif ir >= RAYS:
+            ir = RAYS - 1
+        if depths[il] < pd or depths[ir] < pd:
+            continue
+        y1 = MID + int(50 / (pd + 0.5))
+        far = pd - 0.5
+        if far < 0.3:
+            far = 0.3
+        y2 = MID + int(50 / far)
+        if y2 > VIEW_BOT - 1:
+            y2 = VIEW_BOT - 1
+        if y2 - y1 < 2:
+            continue
+        draw.set_color(60, 210, 40)
+        draw.fill_rect(sx - w // 2, y1, w, y2 - y1)
 
 
 def draw_exit():
@@ -512,7 +605,7 @@ def draw_pickups():
         pd = r[0]
         sx = r[1]
 
-        if p[2] == "S" or p[2] == "C" or p[2] == "R":
+        if p[2] in "SCRybr":
             size = int(20 / pd)
             lim = 16
         else:
@@ -611,6 +704,25 @@ def draw_enemies():
             draw.fill_rect(sx - q // 2, MID, q, q)
 
 
+def draw_projs():
+    for p in projs:
+        r = project(p[0], p[1])
+        if r is None:
+            continue
+        size = int(18 / r[0])
+        if size < 3:
+            size = 3
+        elif size > 16:
+            size = 16
+        c = PROJC[p[5]]
+        draw.set_color(c[0], c[1], c[2])
+        draw.fill_rect(r[1] - size // 2, MID - size // 2, size, size)
+        q = size // 2
+        if q >= 2:
+            draw.set_color(255, 255, 200)
+            draw.fill_rect(r[1] - q // 2, MID - q // 2, q, q)
+
+
 def draw_weapon():
     bx = 0
     by = 0
@@ -644,12 +756,25 @@ def draw_hud():
     w = WEAPONS[wp]
     draw.set_color(255, 255, 255)
     draw.draw_text(3, 13, "HP" + str(health))
-    draw.draw_text(58, 13, "AR" + str(armor))
-    draw.draw_text(105, 13, w[0] + " " + str(ammo[w[1]]))
-    draw.draw_text(212, 13, "K" + str(kills) + "/" + str(total))
-    if has_key:
-        draw.set_color(60, 200, 255)
-        draw.draw_text(282, 13, "KEY")
+    draw.draw_text(50, 13, "AR" + str(armor))
+    draw.draw_text(100, 13, w[0] + " " + str(ammo[w[1]]))
+    draw.draw_text(196, 13, "K" + str(kills) + "/" + str(total))
+
+    m = ""
+    if strafe:
+        m = "S"
+    if cruise:
+        m = m + "R"
+    if m != "":
+        draw.set_color(255, 200, 60)
+        draw.draw_text(252, 13, m)
+
+    kc = ((230, 200, 40), (230, 50, 50), (60, 120, 255))
+    for i in range(3):
+        if keys[i]:
+            c = kc[i]
+            draw.set_color(c[0], c[1], c[2])
+            draw.fill_rect(282 + i * 11, 5, 9, 9)
 
     draw.set_color(255, 255, 255)
     draw.draw_text(3, 202, message)
@@ -672,10 +797,17 @@ def draw_hud():
     for r in MM_RUNS:
         draw.fill_rect(ox + r[0] * c, oy + r[1] * c, r[2] * c, c)
 
-    draw.set_color(220, 170, 30)
-    for d in DOORS:
-        if G[d[1]][d[0]] == 5:
-            draw.fill_rect(ox + d[0] * c, oy + d[1] * c, c, c)
+    # doors, gates and secret walls (they change during play)
+    for d in DYN:
+        t = G[d[1]][d[0]]
+        if t == 0:
+            continue
+        if t > 10:
+            draw.set_color(135, 135, 145)
+        else:
+            k = DCOL[t]
+            draw.set_color(k[0], k[1], k[2])
+        draw.fill_rect(ox + d[0] * c, oy + d[1] * c, c, c)
 
     draw.set_color(20, 230, 40)
     draw.fill_rect(ox + EX * c, oy + EY * c, c, c)
@@ -694,7 +826,7 @@ def draw_hud():
 
 
 # ======================= GAME LOGIC =======================
-def move_player(forward, turn):
+def move_player(forward, side, turn):
     global px, py, angle, ca, sa
 
     if turn != 0:
@@ -702,9 +834,9 @@ def move_player(forward, turn):
         ca = math.cos(angle)
         sa = math.sin(angle)
 
-    if forward != 0:
-        dx = ca * forward
-        dy = sa * forward
+    if forward != 0 or side != 0:
+        dx = ca * forward - sa * side
+        dy = sa * forward + ca * side
         if can_stand(px + dx, py):
             px += dx
         if can_stand(px, py + dy):
@@ -740,8 +872,22 @@ def hit_enemy(e, dmg):
         kills += 1
         tot_kills += 1
         set_msg(ET[e[6]][0] + " DOWN")
-    else:
-        set_msg("HIT!")
+        return
+
+    set_msg("HIT!")
+    # pain: the demon staggers and gets knocked back
+    if rnd() * 100 < ET[e[6]][13]:
+        e[9] = 6
+        dx = e[0] - px
+        dy = e[1] - py
+        d = math.sqrt(dx * dx + dy * dy)
+        if d > 0.01:
+            nx = e[0] + dx / d * 0.15
+            ny = e[1] + dy / d * 0.15
+            if not solid(nx, e[1]):
+                e[0] = nx
+            if not solid(e[0], ny):
+                e[1] = ny
 
 
 def targets(rad):
@@ -845,29 +991,101 @@ def try_fire():
         auto_switch()
 
 
-def use_door():
-    global doors_closed
+def use_action():
+    # doors, switches and secret walls: face them and press USE
+    global doors_closed, gates_closed, secrets_found
 
-    best = None
-    for d in DOORS:
-        if G[d[1]][d[0]] == 5:
-            dx = d[0] + 0.5 - px
-            dy = d[1] + 0.5 - py
-            if dx * dx + dy * dy < 2.25:
-                best = d
-    if best is None:
-        if doors_closed > 0:
-            set_msg("NO DOOR NEARBY")
+    d, side, t, f = cast(ca, sa)
+    if d > 1.5:
+        set_msg("NOTHING TO USE")
         return
 
-    if has_key:
-        G[best[1]][best[0]] = 0
-        doors_closed -= 1
-        set_msg("DOOR OPENED")
-        for e in enemies:
-            e[4] = True
+    cx = int(px + ca * (d + 0.02))
+    cy = int(py + sa * (d + 0.02))
+
+    if t >= 5 and t <= 7:
+        if keys[t - 5]:
+            G[cy][cx] = 0
+            doors_closed -= 1
+            set_msg("DOOR OPENED")
+            wake(cx + 0.5, cy + 0.5, 8)
+        else:
+            set_msg("NEED THE " + KC[t - 5] + " KEY")
+    elif t == 9:
+        G[cy][cx] = 10
+        for g in DYN:
+            if G[g[1]][g[0]] == 8:
+                G[g[1]][g[0]] = 0
+        gates_closed = 0
+        set_msg("GATES OPENED!")
+        wake(px, py, 9)
+    elif t >= 11 and t <= 14:
+        G[cy][cx] = 0
+        secrets_found += 1
+        set_msg("SECRET FOUND!")
     else:
-        set_msg("NEED THE KEY")
+        set_msg("NOTHING TO USE")
+
+
+def build_field():
+    # breadth-first distance from the player's tile, used for pathfinding
+    global fcell, fframe
+
+    sx = int(px)
+    sy = int(py)
+    fcell = (sx, sy)
+    fframe = frame
+    for y in range(MH):
+        row = DF[y]
+        for x in range(MW):
+            row[x] = 999
+    DF[sy][sx] = 0
+    q = [sx, sy]
+    h = 0
+    while h < len(q):
+        x = q[h]
+        y = q[h + 1]
+        h += 2
+        d = DF[y][x] + 1
+        if G[y][x + 1] == 0 and DF[y][x + 1] > d:
+            DF[y][x + 1] = d
+            q.append(x + 1)
+            q.append(y)
+        if G[y][x - 1] == 0 and DF[y][x - 1] > d:
+            DF[y][x - 1] = d
+            q.append(x - 1)
+            q.append(y)
+        if G[y + 1][x] == 0 and DF[y + 1][x] > d:
+            DF[y + 1][x] = d
+            q.append(x)
+            q.append(y + 1)
+        if G[y - 1][x] == 0 and DF[y - 1][x] > d:
+            DF[y - 1][x] = d
+            q.append(x)
+            q.append(y - 1)
+
+
+def spawn_proj(e, T, dist):
+    if len(projs) >= 8:
+        return
+    sp = T[12]
+    projs.append([e[0], e[1], (px - e[0]) / dist * sp,
+                  (py - e[1]) / dist * sp, T[4], e[6], 90])
+
+
+def update_projs():
+    for i in range(len(projs) - 1, -1, -1):
+        p = projs[i]
+        p[0] += p[2]
+        p[1] += p[3]
+        p[6] -= 1
+        dx = p[0] - px
+        dy = p[1] - py
+        if dx * dx + dy * dy < 0.16:
+            hurt_player(p[4])
+            projs.pop(i)
+        elif p[6] <= 0 or solid(p[0], p[1]):
+            projs.pop(i)
 
 
 def update_enemies():
@@ -897,34 +1115,114 @@ def update_enemies():
                     e[4] = True
             continue
 
+        # pain stagger
+        if e[9] > 0:
+            e[9] -= 1
+            continue
+
+        # line of sight (cached, refreshed every 6 frames)
+        if (frame + i) % 6 == 0:
+            e[8] = cast(-dx / dist, -dy / dist)[0] >= dist - 0.2
+
         if dist > T[7]:
             sp = T[2] * SPDM[diff]
-            nx = e[0] + dx / dist * sp
-            ny = e[1] + dy / dist * sp
+            if e[8] or dist < 1.2:
+                mx = dx / dist
+                my = dy / dist
+            else:
+                # no line of sight: follow the distance field around walls
+                if (int(px), int(py)) != fcell and frame - fframe >= 4:
+                    build_field()
+                cx = int(e[0])
+                cy = int(e[1])
+                bv = DF[cy][cx]
+                bx = cx
+                by = cy
+                v = DF[cy][cx + 1]
+                if v < bv:
+                    bv = v
+                    bx = cx + 1
+                    by = cy
+                v = DF[cy][cx - 1]
+                if v < bv:
+                    bv = v
+                    bx = cx - 1
+                    by = cy
+                v = DF[cy + 1][cx]
+                if v < bv:
+                    bv = v
+                    bx = cx
+                    by = cy + 1
+                v = DF[cy - 1][cx]
+                if v < bv:
+                    bv = v
+                    bx = cx
+                    by = cy - 1
+                if bx == cx and by == cy:
+                    mx = dx / dist
+                    my = dy / dist
+                else:
+                    tx = bx + 0.5 - e[0]
+                    ty = by + 0.5 - e[1]
+                    td = math.sqrt(tx * tx + ty * ty)
+                    if td < 0.01:
+                        td = 0.01
+                    mx = tx / td
+                    my = ty / td
+            nx = e[0] + mx * sp
+            ny = e[1] + my * sp
             if not solid(nx, e[1]):
                 e[0] = nx
             if not solid(e[0], ny):
                 e[1] = ny
 
+        # keep demons from stacking on each other
+        if (frame + i) % 2 == 0:
+            for j in range(len(enemies)):
+                if j == i:
+                    continue
+                o = enemies[j]
+                if o[2] <= 0:
+                    continue
+                sx = e[0] - o[0]
+                if -0.5 < sx < 0.5:
+                    sy = e[1] - o[1]
+                    if -0.5 < sy < 0.5:
+                        d2 = sx * sx + sy * sy
+                        if d2 < 0.25:
+                            if d2 < 0.0004:
+                                sx = 0.05
+                                d2 = 0.0025
+                            d3 = math.sqrt(d2)
+                            nx = e[0] + sx / d3 * 0.03
+                            ny = e[1] + sy / d3 * 0.03
+                            if not solid(nx, e[1]):
+                                e[0] = nx
+                            if not solid(e[0], ny):
+                                e[1] = ny
+
+        # attacks
         if dist <= 0.9:
             e[3] += 1
             if e[3] >= 35:
                 e[3] = 0
                 hurt_player(T[3])
-        elif T[4] > 0 and dist <= T[5]:
+        elif T[11] > 0 and dist <= T[5] and e[8]:
             e[3] += 1
             if e[3] >= T[6]:
                 e[3] = 0
-                if cast(-dx / dist, -dy / dist)[0] >= dist - 0.3:
-                    e[7] = 4
+                e[7] = 4
+                if T[11] == 1:
                     if rnd() < 0.95 - dist * 0.08:
                         hurt_player(T[4])
+                else:
+                    spawn_proj(e, T, dist)
         elif e[3] > 15:
             e[3] = 15
 
 
 def collect_pickups():
-    global health, armor, has_key, wp
+    global health, armor, wp
 
     for p in pickups:
         if not p[3]:
@@ -950,9 +1248,15 @@ def collect_pickups():
         elif k == "X" and ammo[2] < AMAX[2]:
             ammo[2] = min(AMAX[2], ammo[2] + 3)
             set_msg("ROCKETS +3")
-        elif k == "K":
-            has_key = True
-            set_msg("GOT THE KEY!")
+        elif k == "y":
+            keys[0] = True
+            set_msg("YELLOW KEY!")
+        elif k == "r":
+            keys[1] = True
+            set_msg("RED KEY!")
+        elif k == "b":
+            keys[2] = True
+            set_msg("BLUE KEY!")
         elif k == "S":
             have[1] = True
             ammo[1] = min(AMAX[1], ammo[1] + 8)
@@ -974,10 +1278,11 @@ def collect_pickups():
 
 
 def load_level(n):
-    global G, MW, MH, STEPS, EX, EY, DOORS, enemies, pickups, th
-    global px, py, angle, ca, sa, kills, total, has_key, doors_closed
-    global frame, shoot_flash, fire_cd, hurt, moving, depths
-    global MM_RUNS, MMC, MMX, message, msg_t
+    global G, HZ, HZL, DYN, DF, MW, MH, STEPS, EX, EY, enemies, pickups
+    global projs, th, px, py, angle, ca, sa, kills, total, keys, cruise
+    global doors_closed, gates_closed, secrets_found, secrets_total
+    global frame, shoot_flash, fire_cd, hurt, acid, acid_t, moving, depths
+    global MM_RUNS, MMC, MMX, message, msg_t, fcell, fframe
 
     L = LEVELS[n]
     rows = L[1]
@@ -985,33 +1290,59 @@ def load_level(n):
     MW = len(rows[0])
     STEPS = MW + MH + 2
     G = []
-    DOORS = []
+    HZ = []
+    HZL = []
+    DYN = []
+    DF = []
+    doors_closed = 0
+    gates_closed = 0
+    secrets_total = 0
     for y in range(MH):
         row = []
+        hrow = []
         for x in range(MW):
             c = rows[y][x]
+            hz = False
             if c == "0":
-                row.append(0)
+                v = 0
             elif c == "E":
-                row.append(0)
+                v = 0
                 EX = x
                 EY = y
-            elif c == "D":
-                row.append(5)
-                DOORS.append((x, y))
+            elif c == "~":
+                v = 0
+                hz = True
+                HZL.append((x + 0.5, y + 0.5))
             else:
-                row.append(int(c))
+                v = MC[c]
+                if v == 8 or (v >= 5 and v <= 7) or v >= 11:
+                    DYN.append((x, y))
+                if v >= 5 and v <= 7:
+                    doors_closed += 1
+                elif v == 8:
+                    gates_closed += 1
+                elif v >= 11:
+                    secrets_total += 1
+            row.append(v)
+            hrow.append(hz)
         G.append(row)
+        HZ.append(hrow)
+        DF.append([999] * MW)
 
-    # minimap: merge wall cells into runs
+    # minimap: merge static wall cells into runs
     MM_RUNS = []
     for y in range(MH):
         x = 0
         while x < MW:
-            if 0 < G[y][x] < 5:
+            v = G[y][x]
+            if v > 0 and (v < 5 or v == 9 or v == 10):
                 s = x
-                while x < MW and 0 < G[y][x] < 5:
-                    x += 1
+                while x < MW:
+                    v = G[y][x]
+                    if v > 0 and (v < 5 or v == 9 or v == 10):
+                        x += 1
+                    else:
+                        break
                 MM_RUNS.append((s, y, x - s))
             else:
                 x += 1
@@ -1022,10 +1353,12 @@ def load_level(n):
 
     enemies = []
     for s in L[3]:
-        enemies.append([s[0], s[1], ET[s[2]][1], 0, False, 0, s[2], 0])
+        enemies.append([s[0], s[1], ET[s[2]][1], 0, False, 0, s[2], 0,
+                        False, 0])
     pickups = []
     for s in L[4]:
         pickups.append([s[0], s[1], s[2], True])
+    projs = []
 
     px = L[2][0]
     py = L[2][1]
@@ -1035,13 +1368,18 @@ def load_level(n):
     th = L[5]
     kills = 0
     total = len(enemies)
-    has_key = False
-    doors_closed = len(DOORS)
+    keys = [False, False, False]
+    secrets_found = 0
+    cruise = False
     frame = 0
     shoot_flash = 0
     fire_cd = 0
     hurt = 0
+    acid = 0
+    acid_t = 0
     moving = False
+    fcell = (-1, -1)
+    fframe = -99
     depths = [MAX_DIST] * RAYS
     message = L[0]
     msg_t = 60
@@ -1082,7 +1420,10 @@ def draw_list(title, labels, sel, sub=""):
     n = len(labels)
     step = 20
     y = 92
-    if n > 6:
+    if n > 8:
+        step = 14
+        y = 70
+    elif n > 6:
         step = 17
         y = 76
     elif n <= 4:
@@ -1090,7 +1431,7 @@ def draw_list(title, labels, sel, sub=""):
     for i in range(n):
         if i == sel:
             draw.set_color(110, 15, 15)
-            draw.fill_rect(40, y - 14, 240, step - 1)
+            draw.fill_rect(40, y - step + 5, 240, step - 1)
             draw.set_color(255, 230, 60)
             draw.draw_text(48, y, "> " + labels[i])
         else:
@@ -1124,7 +1465,7 @@ def info_screen(lines, title):
     draw.set_color(230, 40, 40)
     ctext(30, title)
     draw.set_color(230, 230, 230)
-    y = 55
+    y = 56
     for s in lines:
         draw.draw_text(20, y, s)
         y += 16
@@ -1142,15 +1483,23 @@ def how_to():
     info_screen([
         "ARROWS  MOVE AND TURN",
         "2ND     SHOOT",
-        "ENTER   OPEN DOOR",
+        "ENTER   USE: DOORS, SWITCHES,",
+        "        SECRET WALLS (FACE IT)",
         "CLEAR   PAUSE",
-        "NEXT WEAPON KEY: SET IT IN",
+        "THE OTHER KEYS ARE SET IN",
         "SETTINGS > CONTROLS",
-        "BLUE KEY OPENS GOLD DOORS",
-        "GREEN=HP BLUE=ARMOR",
-        "YELLOW/ORANGE/RED=AMMO",
+        "MOVE STYLE CRUISE: UP TOGGLES",
+        "AUTORUN SO YOU CAN TURN+SHOOT"], "HOW TO PLAY 1/2")
+    info_screen([
+        "GREEN=HEALTH  TEAL=ARMOR",
+        "SILVER/ORANGE/RED=AMMO",
         "WHITE=NEW WEAPON",
-        "TIP: TURN ON AUTO FIRE"], "HOW TO PLAY")
+        "YELLOW/RED/BLUE KEYS OPEN",
+        "MATCHING DOORS",
+        "GREEN PUDDLES BURN YOU",
+        "FIREBALLS CAN BE DODGED",
+        "STRAFE SIDEWAYS TO AVOID",
+        "SOME WALLS HIDE SECRETS"], "HOW TO PLAY 2/2")
 
 
 def capture_key(i):
@@ -1174,7 +1523,7 @@ def controls_menu():
     while True:
         if dirty:
             labels = []
-            for i in range(3):
+            for i in range(4):
                 labels.append(KN[i] + ": " + str(KEYS[i]))
             labels.append("RESET DEFAULTS")
             labels.append("BACK")
@@ -1182,16 +1531,16 @@ def controls_menu():
             dirty = False
         k = press()
         if k == K_UP:
-            sel = (sel - 1) % 5
+            sel = (sel - 1) % 6
             dirty = True
         elif k == K_DOWN:
-            sel = (sel + 1) % 5
+            sel = (sel + 1) % 6
             dirty = True
         elif k == K_ENTER:
-            if sel < 3:
+            if sel < 4:
                 capture_key(sel)
-            elif sel == 3:
-                for i in range(3):
+            elif sel == 4:
+                for i in range(4):
                     KEYS[i] = DEF_KEYS[i]
             else:
                 return
@@ -1209,16 +1558,25 @@ def onoff(v):
 
 def settings_menu():
     global qual, diff, turn_i, show_map, bob_on, autofire
+    global move_style, strafe
 
     sel = 0
     dirty = True
     flush()
     while True:
         if dirty:
+            ms = "HOLD"
+            if move_style == 1:
+                ms = "CRUISE"
+            sk = "TURN"
+            if strafe:
+                sk = "STRAFE"
             labels = [
                 "QUALITY: " + QN[qual],
                 "DIFFICULTY: " + DN[diff],
                 "TURN SPEED: " + str(turn_i + 1),
+                "MOVE STYLE: " + ms,
+                "LEFT/RIGHT: " + sk,
                 "MINIMAP: " + onoff(show_map),
                 "WEAPON BOB: " + onoff(bob_on),
                 "AUTO FIRE: " + onoff(autofire),
@@ -1230,10 +1588,10 @@ def settings_menu():
 
         k = press()
         if k == K_UP:
-            sel = (sel - 1) % 8
+            sel = (sel - 1) % 10
             dirty = True
         elif k == K_DOWN:
-            sel = (sel + 1) % 8
+            sel = (sel + 1) % 10
             dirty = True
         elif k == K_BACK:
             return
@@ -1249,12 +1607,16 @@ def settings_menu():
             elif sel == 2:
                 turn_i = min(4, max(0, turn_i + d))
             elif sel == 3:
-                show_map = not show_map
+                move_style = 1 - move_style
             elif sel == 4:
-                bob_on = not bob_on
+                strafe = not strafe
             elif sel == 5:
-                autofire = not autofire
+                show_map = not show_map
             elif sel == 6:
+                bob_on = not bob_on
+            elif sel == 7:
+                autofire = not autofire
+            elif sel == 8:
                 if k == K_ENTER:
                     controls_menu()
                     flush()
@@ -1276,11 +1638,11 @@ def show_card(n):
     L = LEVELS[n]
     cls()
     draw.set_color(190, 20, 20)
-    ctext(60, "LEVEL " + str(n + 1) + " OF " + str(len(LEVELS)))
+    ctext(55, "LEVEL " + str(n + 1) + " OF " + str(len(LEVELS)))
     draw.set_color(255, 255, 255)
-    ctext(85, L[0])
+    ctext(80, L[0])
     draw.set_color(60, 200, 255)
-    ctext(120, L[6])
+    ctext(115, L[6])
     draw.set_color(150, 150, 150)
     ctext(190, "ENTER: BEGIN   CLEAR: MENU")
     flip()
@@ -1297,14 +1659,15 @@ def level_done(n, last):
     cls()
     draw.set_color(40, 220, 50)
     if last:
-        ctext(55, "YOU WIN!")
+        ctext(50, "YOU WIN!")
     else:
-        ctext(55, "LEVEL COMPLETE")
+        ctext(50, "LEVEL COMPLETE")
     draw.set_color(255, 255, 255)
-    ctext(90, "KILLS: " + str(kills) + "/" + str(total))
-    ctext(110, "HEALTH: " + str(health))
+    ctext(85, "KILLS: " + str(kills) + "/" + str(total))
+    ctext(103, "SECRETS: " + str(secrets_found) + "/" + str(secrets_total))
+    ctext(121, "HEALTH: " + str(health))
     if last:
-        ctext(130, "TOTAL KILLS: " + str(tot_kills))
+        ctext(145, "TOTAL KILLS: " + str(tot_kills))
     draw.set_color(150, 150, 150)
     ctext(185, "PRESS ENTER")
     flip()
@@ -1319,9 +1682,11 @@ def level_done(n, last):
 def play_level():
     # returns 0 = quit to menu, 1 = died, 2 = reached exit
     global frame, shoot_flash, hurt, message, msg_t, moving, fire_cd
+    global cruise, strafe, acid, acid_t, health
 
     prev = system.get_key(0)
     queued = 0
+    cruise = False
 
     while True:
         key = system.get_key(0)
@@ -1337,12 +1702,19 @@ def play_level():
         if fire_cd > 0:
             fire_cd -= 1
 
-        if new and key == KEYS[0]:
-            queued = 8
-        elif new and key == KEYS[1]:
-            use_door()
-        elif new and key == KEYS[2]:
-            next_weapon()
+        if new:
+            if key == KEYS[0]:
+                queued = 8
+            elif key == KEYS[1]:
+                use_action()
+            elif key == KEYS[2]:
+                next_weapon()
+            elif key == KEYS[3]:
+                strafe = not strafe
+                if strafe:
+                    set_msg("STRAFE MODE")
+                else:
+                    set_msg("TURN MODE")
 
         if queued > 0:
             queued -= 1
@@ -1352,18 +1724,37 @@ def play_level():
         elif key == KEYS[0] and fire_cd == 0 and WEAPONS[wp][5]:
             try_fire()
 
+        # movement
         fwd = 0.0
+        sd = 0.0
         trn = 0.0
-        if key == K_UP:
-            fwd = 0.12
-        elif key == K_DOWN:
-            fwd = -0.1
-        elif key == K_LEFT:
-            trn = -TURN[turn_i]
+        if move_style == 1:
+            # cruise: UP toggles autorun, DOWN stops and backs up
+            if new and key == K_UP:
+                cruise = not cruise
+            if key == K_DOWN:
+                cruise = False
+                fwd = -0.1
+            elif cruise:
+                fwd = 0.12
+        else:
+            cruise = False
+            if key == K_UP:
+                fwd = 0.12
+            elif key == K_DOWN:
+                fwd = -0.1
+        if key == K_LEFT:
+            if strafe:
+                sd = -0.1
+            else:
+                trn = -TURN[turn_i]
         elif key == K_RIGHT:
-            trn = TURN[turn_i]
-        moving = fwd != 0
-        move_player(fwd, trn)
+            if strafe:
+                sd = 0.1
+            else:
+                trn = TURN[turn_i]
+        moving = fwd != 0 or sd != 0
+        move_player(fwd, sd, trn)
 
         if autofire and fire_cd == 0 and frame % 3 == 0:
             w = WEAPONS[wp]
@@ -1383,7 +1774,21 @@ def play_level():
                 message = hint()
 
         update_enemies()
+        update_projs()
         collect_pickups()
+
+        # acid floors
+        if HZ[int(py)][int(px)]:
+            acid = 3
+            acid_t += 1
+            if acid_t >= 8:
+                acid_t = 0
+                health -= 2
+                if health < 0:
+                    health = 0
+                set_msg("ACID BURNS!")
+        elif acid > 0:
+            acid -= 1
 
         if int(px) == EX and int(py) == EY:
             if boss_alive():
@@ -1398,7 +1803,7 @@ def play_level():
 
 
 def campaign(start):
-    global health, armor, ammo, have, wp, tot_kills
+    global health, armor, ammo, have, wp
 
     new_game(start)
     n = start
@@ -1437,7 +1842,7 @@ def main():
     while True:
         c = choose("DOOM EVO", ["START GAME", "LEVEL SELECT", "SETTINGS",
                                 "HOW TO PLAY", "QUIT"], sel,
-                   "Made by Ravi Dave")
+                   "CALCULATOR EDITION")
         if c >= 0:
             sel = c
         if c == 0:

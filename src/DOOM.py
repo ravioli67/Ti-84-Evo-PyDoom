@@ -1,7 +1,8 @@
+print("Starting, importing libraries...")
 import math
 import ti_draw as draw
 import ti_system as system
-
+print("Finished importing libraries")
 # ======================= CONSTANTS =======================
 W = 319
 H = 209
@@ -94,6 +95,8 @@ WSPR = [
      (30, 30, 35, 146, 112, 28, 22), (220, 70, 20, 152, 118, 16, 10)]
 ]
 WFLASH = [132, 118, 112, 100]
+
+print("Loaded the variables...")
 
 # levels
 LEVELS = [
@@ -209,6 +212,8 @@ LEVELS = [
      "KILL THE BARON, REACH THE EXIT")
 ]
 
+print("Loading levels...")
+
 # variables x1
 qual = 1
 diff = 1
@@ -283,6 +288,7 @@ MM_RUNS = []
 MMC = 4
 MMX = 268
 
+print("Defined Extra Variables.")
 
 # ======================= HELPERS =======================
 def flip():
@@ -357,6 +363,7 @@ def apply_quality():
         SINO.append(math.sin(a))
     depths = [MAX_DIST] * RAYS
 
+print("Defining functions... 40%")
 
 apply_quality()
 
@@ -422,6 +429,7 @@ def cast(dx, dy):
 
     return MAX_DIST, 0, 1, 0.5
 
+print("Defining functions... 55%")
 
 def project(x, y):
     # screen x and perpendicular distance of a point, or None if hidden
@@ -520,6 +528,7 @@ def draw_world():
     draw_hud()
     flip()
 
+print("Defining functions... 75%")
 
 def draw_acid():
     # flat green puddles on the floor
@@ -692,6 +701,7 @@ def draw_enemies():
             q = max(2, size // 4)
             draw.fill_rect(sx - q // 2, MID, q, q)
 
+print("Defining functions... 80%")
 
 def draw_projs():
     for p in projs:
@@ -813,7 +823,8 @@ def draw_hud():
     draw.fill_rect(sx - 1, sy - 1, 3, 3)
     draw.draw_line(sx, sy, sx + int(ca * 5), sy + int(sa * 5))
 
-
+print("Defining functions... 100%")
+print("Finished section one of defining functions")
 # ======================= GAME LOGIC =======================
 def move_player(forward, side, turn):
     global px, py, angle, ca, sa
@@ -1015,6 +1026,7 @@ def use_action():
     else:
         set_msg("NOTHING TO USE")
 
+print("Defined the inventory system")
 
 def build_field():
     # breadth-first distance from the player's tile, used for pathfinding

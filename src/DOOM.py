@@ -1838,7 +1838,7 @@ def campaign(start):
 def main():
     sel = 0
     while True:
-        c = choose("DOOM EVO", ["START GAME", "LEVEL SELECT", "SETTINGS",
+        c = choose("DOOM EVO", ["START GAME", "SELECT LEVEL", "SETTINGS",
                                 "HOW TO PLAY", "QUIT"], sel,
                    "CALCULATOR EDITION")
         if c >= 0:

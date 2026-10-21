@@ -10,6 +10,8 @@ MAX_DIST = 14.0
 VIEW_TOP = 19
 VIEW_BOT = 190
 MID = 105
+WALLH = 190      # wall height in pixels at distance 1
+FLH = 95         # half of that: horizon to floor at distance 1
 
 # Fixed keys (menus + movement)
 K_ENTER = 105
@@ -25,6 +27,7 @@ KEYS = [21, 105, 22, 23]
 KN = ["SHOOT", "USE", "NEXT WEAPON", "TURN/STRAFE"]
 KC = ["YELLOW", "RED", "BLUE"]
 
+# quality: rays, strip width. Quality also sets how much detail is drawn.
 QUAL = [(40, 8), (53, 6), (80, 4)]
 QN = ["LOW", "MED", "HIGH"]
 DN = ["EASY", "NORMAL", "HARD"]
@@ -45,62 +48,154 @@ MC = {"1": 1, "2": 2, "3": 3, "4": 4, "Y": 5, "R": 6, "B": 7, "G": 8,
 # minimap colours for doors and gates
 DCOL = {5: (220, 170, 30), 6: (220, 40, 40), 7: (60, 110, 255),
         8: (120, 130, 150)}
+LAMP = {5: (255, 220, 60), 6: (255, 70, 70), 7: (90, 160, 255)}
 
-# pickup colours (y/r/b = yellow/red/blue keys)
-PCOL = {
-    "H": (30, 255, 80), "A": (190, 190, 200), "B": (255, 140, 20),
-    "X": (255, 70, 70), "V": (70, 200, 190),
-    "y": (255, 230, 40), "r": (255, 40, 40), "b": (60, 120, 255),
-    "S": (235, 235, 235), "C": (235, 235, 235), "R": (235, 235, 235)
-}
-PROJC = {0: (255, 150, 30), 3: (255, 60, 60), 4: (90, 255, 110)}
+# projectile colours by shooter type (9 = player rocket)
+PROJC = {0: (255, 150, 30), 3: (255, 60, 60), 4: (90, 255, 110),
+         9: (255, 170, 40)}
 
-# enemy types:
+# enemy stats:
 # 0 name, 1 hp, 2 speed, 3 melee dmg, 4 ranged dmg, 5 range, 6 fire delay,
-# 7 stop distance, 8 sprite size, 9 body, 10 head,
+# 7 stop distance, 8 (unused), 9-10 (unused),
 # 11 ranged kind (0 none, 1 hitscan, 2 fireball), 12 fireball speed,
 # 13 pain chance %
 ET = [
-    ("IMP", 3, 0.030, 8, 7, 7, 80, 0.8, 34, (110, 12, 12), (160, 30, 25),
-     2, 0.09, 70),
-    ("ZOMBIE", 3, 0.022, 4, 5, 8, 60, 3.0, 34, (45, 75, 45), (100, 130, 80),
-     1, 0.0, 60),
-    ("DEMON", 10, 0.052, 14, 0, 0, 0, 0.8, 38, (140, 55, 105),
-     (185, 85, 140), 0, 0.0, 40),
-    ("CACO", 14, 0.025, 6, 10, 7, 75, 2.2, 42, (170, 35, 35), (215, 70, 70),
-     2, 0.11, 30),
-    ("BARON", 45, 0.032, 18, 12, 9, 50, 2.5, 52, (30, 110, 45), (65, 165, 75),
-     2, 0.13, 10)
+    ("IMP", 3, 0.030, 8, 7, 7, 80, 0.8, 0, 0, 0, 2, 0.09, 70),
+    ("ZOMBIE", 3, 0.022, 4, 5, 8, 60, 3.0, 0, 0, 0, 1, 0.0, 60),
+    ("DEMON", 10, 0.052, 14, 0, 0, 0, 0.8, 0, 0, 0, 0, 0.0, 40),
+    ("CACO", 14, 0.025, 6, 10, 7, 75, 2.2, 0, 0, 0, 2, 0.11, 30),
+    ("BARON", 45, 0.032, 18, 12, 9, 50, 2.5, 0, 0, 0, 2, 0.13, 10)
+]
+
+# enemy sprites: height (x wall height), width (x height), hover height,
+# palette, parts. A part is (x0, y0, x1, y1, colour, tag) in percent of the
+# sprite box (x: -50..50 from the centre, y: 0 top .. 100 feet).
+# tags: 0 always, 1/2 leg A/B (walk), 3 arm (raises when attacking),
+#       4 only while attacking, 5 eyes, 6 detail (skipped when far/low quality)
+SPR = [
+    # IMP
+    (0.60, 0.72, 0.0,
+     [(132, 80, 50), (88, 50, 30), (176, 116, 74), (255, 70, 40),
+      (232, 222, 190), (60, 36, 22), (255, 150, 40)],
+     [(-30, 66, -4, 100, 1, 1), (4, 66, 30, 100, 1, 2),
+      (-34, 94, -2, 100, 4, 1), (2, 94, 34, 100, 4, 2),
+      (-32, 28, 32, 70, 0, 0), (-16, 40, 16, 64, 2, 6),
+      (-48, 30, -32, 60, 0, 3), (32, 30, 48, 60, 0, 3),
+      (-50, 58, -32, 66, 4, 3), (32, 58, 50, 66, 4, 3),
+      (-22, 4, 22, 32, 0, 0), (-14, 16, -5, 23, 3, 5), (5, 16, 14, 23, 3, 5),
+      (-11, 25, 11, 29, 1, 6), (-28, -2, -18, 12, 5, 6),
+      (18, -2, 28, 12, 5, 6), (-38, 26, -28, 36, 5, 6),
+      (28, 26, 38, 36, 5, 6), (-12, 44, 12, 60, 6, 4)]),
+    # ZOMBIE
+    (0.66, 0.55, 0.0,
+     [(72, 108, 72), (44, 66, 44), (204, 164, 132), (34, 34, 40),
+      (96, 100, 108), (255, 220, 100), (30, 30, 30), (120, 96, 52)],
+     [(-26, 64, -4, 96, 1, 1), (4, 64, 26, 96, 1, 2),
+      (-30, 94, -2, 100, 6, 1), (2, 94, 30, 100, 6, 2),
+      (-30, 28, 30, 66, 0, 0), (-30, 58, 30, 63, 7, 6),
+      (-46, 30, -30, 62, 0, 0), (30, 30, 44, 52, 0, 3), (6, 36, 26, 50, 3, 3),
+      (-16, 6, 16, 30, 2, 0), (-19, 1, 19, 13, 4, 0),
+      (-9, 16, -3, 21, 1, 5), (3, 16, 9, 21, 1, 5), (12, 28, 22, 36, 5, 4)]),
+    # DEMON
+    (0.58, 1.0, 0.0,
+     [(206, 112, 142), (142, 62, 92), (238, 152, 178), (255, 230, 60),
+      (244, 242, 226), (226, 216, 182), (62, 12, 28)],
+     [(-34, 70, -8, 100, 1, 1), (8, 70, 34, 100, 1, 2),
+      (-46, 34, 46, 74, 0, 0), (-26, 48, 26, 70, 2, 6),
+      (-52, 40, -42, 68, 1, 0), (42, 40, 52, 68, 1, 0),
+      (-32, 2, 32, 44, 0, 0), (-22, 30, 22, 42, 6, 0),
+      (-20, 30, 20, 34, 4, 0), (-18, 38, 18, 42, 4, 6),
+      (-24, 12, -10, 20, 3, 5), (10, 12, 24, 20, 3, 5),
+      (-26, 8, -8, 12, 1, 6), (8, 8, 26, 12, 1, 6),
+      (-36, -4, -26, 8, 5, 6), (26, -4, 36, 8, 5, 6)]),
+    # CACODEMON
+    (0.58, 1.0, 0.2,
+     [(190, 42, 42), (120, 22, 28), (228, 96, 84), (246, 242, 232),
+      (92, 232, 62), (20, 20, 24), (250, 246, 222), (52, 6, 12),
+      (232, 222, 190), (255, 170, 50)],
+     [(-20, 0, 20, 12, 0, 0), (-34, 10, 34, 24, 0, 0),
+      (-46, 22, 46, 72, 0, 0), (-38, 70, 38, 84, 0, 0),
+      (-26, 82, 26, 100, 0, 0), (-44, 58, 44, 72, 1, 6),
+      (-30, 12, -12, 24, 2, 6), (-18, 22, 18, 50, 3, 0),
+      (-10, 28, 10, 46, 4, 0), (-4, 32, 4, 42, 5, 0),
+      (-34, 58, 34, 76, 7, 0), (-30, 58, 30, 62, 6, 6),
+      (-30, 72, 30, 76, 6, 6), (-16, -8, -8, 6, 8, 6), (8, -8, 16, 6, 8, 6),
+      (-30, 50, 30, 80, 9, 4)]),
+    # BARON
+    (0.95, 0.78, 0.0,
+     [(46, 142, 62), (26, 84, 38), (92, 192, 102), (255, 50, 30),
+      (236, 230, 200), (46, 30, 26), (152, 102, 82), (126, 255, 142)],
+     [(-30, 66, -6, 98, 6, 1), (6, 66, 30, 98, 6, 2),
+      (-34, 94, -4, 100, 5, 1), (4, 94, 34, 100, 5, 2),
+      (-34, 26, 34, 70, 0, 0), (-20, 32, 20, 50, 2, 6),
+      (-34, 60, 34, 66, 1, 0), (-54, 28, -34, 62, 0, 3),
+      (34, 28, 54, 62, 0, 3), (-58, 22, -32, 34, 1, 6),
+      (32, 22, 58, 34, 1, 6), (-54, 56, -34, 68, 7, 4),
+      (34, 56, 54, 68, 7, 4), (-18, 4, 18, 30, 0, 0),
+      (-34, 0, -18, 8, 4, 0), (18, 0, 34, 8, 4, 0),
+      (-38, -8, -30, 4, 4, 6), (30, -8, 38, 4, 4, 6),
+      (-12, 14, -4, 20, 3, 5), (4, 14, 12, 20, 3, 5), (-8, 22, 8, 26, 1, 6)])
 ]
 
 # weapons: name, ammo type, damage, hit radius, cooldown, auto, max targets, splash
 WEAPONS = [
-    ("PISTOL", 0, 2, 0.30, 9, False, 1, 0.0),
-    ("SHOTGUN", 1, 9, 0.65, 24, False, 2, 0.0),
-    ("CHAINGUN", 0, 2, 0.32, 3, True, 1, 0.0),
-    ("ROCKET", 2, 14, 0.40, 36, False, 1, 1.6)
+    ("PISTOL", 0, 2, 0.22, 9, False, 1, 0.0),
+    ("SHOTGUN", 1, 9, 0.50, 24, False, 2, 0.0),
+    ("CHAINGUN", 0, 2, 0.24, 3, True, 1, 0.0),
+    ("ROCKET", 2, 14, 0.30, 36, False, 1, 1.6)
 ]
 
-# weapon sprites: (r, g, b, x, y, w, h)
-WSPR = [
-    [(65, 65, 72, 132, 157, 55, 52), (110, 110, 118, 145, 143, 29, 48),
-     (25, 25, 30, 152, 139, 15, 27)],
-    [(55, 40, 28, 124, 176, 72, 33), (80, 80, 88, 140, 158, 40, 30),
-     (110, 110, 118, 148, 128, 24, 40), (25, 25, 30, 153, 124, 14, 20),
-     (95, 62, 30, 140, 168, 40, 14)],
-    [(50, 50, 58, 122, 168, 76, 41), (95, 95, 105, 136, 134, 14, 40),
-     (105, 105, 115, 152, 128, 16, 46), (95, 95, 105, 169, 134, 14, 40)],
-    [(60, 75, 50, 128, 150, 64, 60), (90, 110, 80, 140, 128, 40, 40),
-     (30, 30, 35, 146, 112, 28, 22), (220, 70, 20, 152, 118, 16, 10)]
+# first-person weapon art. A part is (x, y, w, h, colour, tag).
+# tags: 0 always, 1 detail (MED+), 2 fine detail (HIGH), 3 shotgun pump,
+#       5/6 chaingun barrels (the lit barrel alternates while firing)
+WPAL = [
+    [(58, 60, 68), (128, 132, 146), (20, 20, 24), (214, 170, 134),
+     (168, 124, 94), (72, 82, 112)],
+    [(58, 60, 68), (128, 132, 146), (20, 20, 24), (214, 170, 134),
+     (168, 124, 94), (88, 58, 32), (122, 82, 48), (70, 80, 110)],
+    [(58, 60, 68), (128, 132, 146), (20, 20, 24), (214, 170, 134),
+     (168, 124, 94), (98, 100, 112), (176, 142, 50), (70, 82, 70)],
+    [(58, 60, 68), (128, 132, 146), (20, 20, 24), (214, 170, 134),
+     (168, 124, 94), (84, 98, 66), (116, 134, 92), (210, 60, 40),
+     (70, 82, 110)]
 ]
-WFLASH = [132, 118, 112, 100]
+WPAR = [
+    # pistol
+    [(154, 122, 12, 8, 1, 0), (150, 130, 20, 16, 0, 0),
+     (150, 130, 5, 16, 1, 1), (146, 146, 28, 28, 0, 0),
+     (146, 146, 6, 28, 1, 1), (158, 148, 4, 6, 2, 2),
+     (142, 170, 36, 20, 2, 0), (136, 176, 48, 16, 3, 0),
+     (136, 176, 48, 4, 4, 1), (132, 184, 56, 10, 5, 0)],
+    # shotgun
+    [(154, 106, 12, 8, 2, 0), (150, 114, 20, 48, 0, 0),
+     (150, 114, 5, 48, 1, 1), (142, 148, 36, 8, 0, 0),
+     (140, 152, 40, 22, 5, 3), (140, 152, 40, 4, 6, 3),
+     (144, 160, 32, 2, 2, 2), (146, 172, 28, 20, 0, 0),
+     (146, 172, 6, 20, 1, 1), (126, 156, 22, 22, 3, 0),
+     (126, 156, 22, 5, 4, 1), (170, 176, 26, 16, 3, 0),
+     (120, 184, 80, 10, 7, 0)],
+    # chaingun
+    [(136, 108, 12, 54, 5, 5), (154, 102, 12, 60, 5, 6),
+     (172, 108, 12, 54, 5, 5), (132, 140, 56, 6, 2, 0),
+     (128, 158, 64, 30, 7, 0), (128, 158, 64, 5, 1, 1),
+     (192, 152, 18, 30, 2, 0), (190, 158, 10, 6, 6, 1),
+     (190, 168, 10, 6, 6, 1), (144, 176, 32, 16, 3, 0)],
+    # rocket launcher
+    [(138, 98, 44, 14, 2, 0), (146, 102, 28, 8, 0, 1),
+     (152, 100, 16, 8, 7, 0), (134, 110, 52, 58, 5, 0),
+     (134, 110, 10, 58, 6, 1), (178, 104, 8, 24, 2, 1),
+     (126, 152, 26, 24, 3, 0), (168, 152, 26, 24, 3, 0),
+     (150, 166, 20, 24, 2, 0), (118, 176, 84, 14, 8, 0)]
+]
+WFL = [(160, 122), (160, 104), (160, 98), (160, 94)]
 
 # ======================= LEVELS =======================
 # map chars: 0 floor, 1-4 walls, ~ acid, E exit
 #   Y/R/B yellow/red/blue door   G gate (opened by a switch)   W switch
 #   a/b/c/d secret wall that looks like wall 1/2/3/4 (press USE on it)
 # level = name, map, (x, y, angle), enemies (x, y, type),
-#         pickups (x, y, type), theme (sky, floor, near floor), objective
+#         pickups (x, y, type), theme (ceiling, far floor, near floor),
+#         objective
 # pickups: H health, V armor, A bullets, B shells, X rockets,
 #          y/r/b keys, S shotgun, C chaingun, R rocket launcher
 LEVELS = [
@@ -120,7 +215,7 @@ LEVELS = [
      [(7.5, 1.5, 0), (9.5, 5.5, 0), (5.5, 7.5, 0), (5.5, 9.5, 0)],
      [(3.5, 3.5, "H"), (5.5, 5.5, "A"), (8.5, 7.5, "H"), (1.5, 6.5, "A"),
       (10.5, 4.5, "y"), (2.5, 9.5, "H")],
-     ((24, 28, 43), (48, 38, 31), (60, 49, 40)),
+     ((34, 38, 56), (44, 36, 30), (74, 60, 50)),
      "FIND THE YELLOW KEY. USE THE DOOR"),
 
     ("TOXIC PLANT", [
@@ -142,7 +237,7 @@ LEVELS = [
      [(7.5, 1.5, "S"), (11.5, 1.5, "y"), (1.5, 5.5, "H"), (14.5, 1.5, "V"),
       (14.5, 2.5, "B"), (14.5, 3.5, "H"), (3.5, 7.5, "A"), (9.5, 5.5, "B"),
       (2.5, 10.5, "H"), (4.5, 3.5, "A"), (12.5, 9.5, "H")],
-     ((20, 36, 28), (36, 46, 30), (48, 60, 38)),
+     ((26, 48, 34), (34, 46, 30), (58, 78, 44)),
      "AVOID THE ACID. A WALL HIDES A SECRET"),
 
     ("DEEP VAULT", [
@@ -167,7 +262,7 @@ LEVELS = [
       (8.5, 1.5, "B"), (7.5, 11.5, "H"), (8.5, 11.5, "A"), (1.5, 3.5, "H"),
       (14.5, 5.5, "H"), (3.5, 3.5, "B"), (1.5, 9.5, "A"), (11.5, 9.5, "A"),
       (3.5, 11.5, "B"), (13.5, 11.5, "A")],
-     ((16, 24, 40), (30, 34, 44), (44, 50, 62)),
+     ((20, 30, 52), (30, 34, 46), (56, 64, 82)),
      "RED KEY: CHAINGUN. BLUE KEY: VAULT"),
 
     ("HELL GATE", [
@@ -191,7 +286,7 @@ LEVELS = [
      [(7.5, 5.5, "y"), (14.5, 11.5, "R"), (14.5, 1.5, "X"), (1.5, 1.5, "X"),
       (1.5, 5.5, "H"), (14.5, 5.5, "H"), (14.5, 9.5, "V"), (3.5, 7.5, "A"),
       (12.5, 7.5, "B"), (1.5, 9.5, "B"), (7.5, 11.5, "H"), (12.5, 11.5, "X")],
-     ((40, 12, 12), (50, 20, 16), (66, 28, 20)),
+     ((52, 16, 14), (50, 20, 16), (92, 40, 28)),
      "FIND THE SWITCH TO OPEN THE ARENA"),
 
     ("BARON'S LAIR", [
@@ -212,12 +307,13 @@ LEVELS = [
      [(5.5, 1.5, "B"), (7.5, 9.5, "X"), (1.5, 9.5, "X"), (12.5, 1.5, "X"),
       (1.5, 6.5, "H"), (12.5, 7.5, "H"), (5.5, 2.5, "A"), (8.5, 8.5, "B"),
       (12.5, 3.5, "V"), (6.5, 5.5, "H"), (3.5, 5.5, "X")],
-     ((30, 8, 8), (40, 16, 12), (55, 22, 16)),
+     ((44, 12, 12), (40, 16, 12), (84, 34, 24)),
      "KILL THE BARON, REACH THE EXIT")
 ]
 
 # ======================= STATE =======================
 qual = 1
+detail = 1
 diff = 1
 turn_i = 2
 show_map = True
@@ -244,11 +340,15 @@ py = 1.5
 angle = 0.0
 ca = 1.0
 sa = 0.0
+hz = MID
+trav = 0.0
 health = 100
 armor = 0
 ammo = [30, 0, 0]
 have = [True, False, False, False]
 wp = 0
+wnew = 0
+wsw = 0
 keys = [False, False, False]
 kills = 0
 tot_kills = 0
@@ -261,6 +361,7 @@ secrets_total = 0
 moving = False
 cruise = False
 shoot_flash = 0
+boom = 0
 fire_cd = 0
 hurt = 0
 acid = 0
@@ -285,7 +386,8 @@ EY = 0
 enemies = []
 pickups = []
 projs = []
-th = ((24, 28, 43), (48, 38, 31), (60, 49, 40))
+fx = []
+th = ((34, 38, 56), (44, 36, 30), (74, 60, 50))
 MM_RUNS = []
 MMC = 4
 MMX = 268
@@ -324,6 +426,20 @@ def set_msg(text):
     msg_t = 40
 
 
+def setc(c, k=100):
+    # set the draw colour to c scaled by k percent
+    r = c[0] * k // 100
+    g = c[1] * k // 100
+    b = c[2] * k // 100
+    if r > 255:
+        r = 255
+    if g > 255:
+        g = 255
+    if b > 255:
+        b = 255
+    draw.set_color(r, g, b)
+
+
 def boss_alive():
     for e in enemies:
         if e[6] == 4 and e[2] > 0:
@@ -353,9 +469,10 @@ def wake(x, y, r):
 
 
 def apply_quality():
-    global RAYS, STRIP, COSO, SINO, depths
+    global RAYS, STRIP, COSO, SINO, depths, detail
     RAYS = QUAL[qual][0]
     STRIP = QUAL[qual][1]
+    detail = qual
     COSO = []
     SINO = []
     for i in range(RAYS):
@@ -434,6 +551,7 @@ def cast(dx, dy):
 
 def project(x, y):
     # screen x and perpendicular distance of a point, or None if hidden
+    # (used for small things: the centre column decides if they are visible)
     dx = x - px
     dy = y - py
     pd = dx * ca + dy * sa
@@ -453,6 +571,49 @@ def project(x, y):
     return pd, sx
 
 
+def proj_raw(x, y):
+    # like project() but without the wall test and with a wider angle,
+    # so big sprites can peek in from the screen edge
+    dx = x - px
+    dy = y - py
+    pd = dx * ca + dy * sa
+    if pd < 0.25:
+        return None
+    dl = math.atan2(dy * ca - dx * sa, pd)
+    if dl > 1.0 or dl < -1.0:
+        return None
+    return pd, int((dl / FOV + 0.5) * W)
+
+
+def vis_span(xl, xr, pd):
+    # the part of the pixel range xl..xr that is not hidden behind a wall
+    il = xl // STRIP
+    ir = xr // STRIP
+    if ir < 0 or il >= RAYS:
+        return None
+    if il < 0:
+        il = 0
+    if ir >= RAYS:
+        ir = RAYS - 1
+    a = -1
+    b = -1
+    lim = pd - 0.15
+    for i in range(il, ir + 1):
+        if depths[i] >= lim:
+            if a < 0:
+                a = i
+            b = i
+    if a < 0:
+        return None
+    l = a * STRIP
+    r = b * STRIP + STRIP
+    if l < xl:
+        l = xl
+    if r > xr:
+        r = xr
+    return (l, r)
+
+
 # ======================= DRAWING =======================
 def cls():
     draw.set_color(0, 0, 0)
@@ -466,16 +627,227 @@ def ctext(y, s):
     draw.draw_text(x, y, s)
 
 
-def draw_world():
+def cfill(x, y, w, h, v):
+    # fill_rect clipped to the visible span v and the 3D view area
+    x1 = x + w
+    if x < v[0]:
+        x = v[0]
+    if x1 > v[1]:
+        x1 = v[1]
+    y1 = y + h
+    if y < VIEW_TOP:
+        y = VIEW_TOP
+    if y1 > VIEW_BOT:
+        y1 = VIEW_BOT
+    if x1 > x and y1 > y:
+        draw.fill_rect(x, y, x1 - x, y1 - y)
+
+
+def rv(x, y, h):
+    # one wall strip piece, clipped to the 3D view area
+    y1 = y + h
+    if y < VIEW_TOP:
+        y = VIEW_TOP
+    if y1 > VIEW_BOT:
+        y1 = VIEW_BOT
+    if y1 > y:
+        draw.fill_rect(x, y, STRIP, y1 - y)
+
+
+def draw_flat():
+    # ceiling and floor with a depth gradient
     c = th[0]
-    draw.set_color(c[0], c[1], c[2])
-    draw.fill_rect(0, 0, W, MID)
-    c = th[1]
-    draw.set_color(c[0], c[1], c[2])
-    draw.fill_rect(0, MID, W, 104)
-    c = th[2]
-    draw.set_color(c[0], c[1], c[2])
-    draw.fill_rect(0, 150, W, 40)
+    f1 = th[1]
+    f2 = th[2]
+    if detail == 0:
+        setc(c)
+        draw.fill_rect(0, 0, W, hz)
+        setc(f1)
+        draw.fill_rect(0, hz, W, H - hz)
+        setc(f2)
+        draw.fill_rect(0, 150 + hz - MID, W, 40)
+        return
+
+    # ceiling bands: lighter overhead, darker toward the horizon
+    setc(c, 125)
+    draw.fill_rect(0, 0, W, 34)
+    setc(c, 105)
+    draw.fill_rect(0, 34, W, 36)
+    setc(c, 82)
+    draw.fill_rect(0, 70, W, hz - 70)
+
+    # floor bands, one per distance
+    y = hz
+    ds = (9.0, 5.0, 3.2, 2.2, 1.5, 0.0)
+    for k in range(6):
+        if k < 3:
+            setc(f1, 70 + k * 14)
+        else:
+            setc(f2, 82 + (k - 3) * 14)
+        y2 = VIEW_BOT
+        if ds[k] > 0:
+            y2 = hz + int(FLH / ds[k])
+        if k == 0:
+            y2 = hz + 11
+        if y2 > VIEW_BOT:
+            y2 = VIEW_BOT
+        if y2 > y:
+            draw.fill_rect(0, y, W, y2 - y)
+            y = y2
+    if y < VIEW_BOT:
+        setc(f2, 118)
+        draw.fill_rect(0, y, W, VIEW_BOT - y)
+
+    if detail < 2:
+        return
+
+    # stripes that slide toward you as you walk: floor tiles + ceiling lights
+    t2 = trav % 2.0
+    for j in range(0, 8, 2):
+        a = j - t2
+        b = a + 1.0
+        if b <= 0.5:
+            continue
+        if a < 0.5:
+            a = 0.5
+        y1 = hz + int(FLH / b)
+        y2 = hz + int(FLH / a)
+        if y2 > VIEW_BOT:
+            y2 = VIEW_BOT
+        if y2 > y1:
+            setc(f2, 128 - j * 4)
+            draw.fill_rect(0, y1, W, y2 - y1)
+        y1 = hz - int(FLH / a)
+        y2 = hz - int(FLH / b)
+        if y1 < VIEW_TOP:
+            y1 = VIEW_TOP
+        if y1 > y2:
+            continue
+        setc(c, 150 - j * 6)
+        draw.fill_rect(0, y1, W, y2 - y1)
+
+
+def wall_strip(x, top, h, t, sh, f):
+    # one wall column: flat colour, or a textured pattern when close
+    if t > 10:
+        t -= 10
+    wc = WRGB[t]
+    r = sh * wc[0] // 100
+    g = sh * wc[1] // 100
+    b = sh * wc[2] // 100
+    if r > 255:
+        r = 255
+    if g > 255:
+        g = 255
+    if b > 255:
+        b = 255
+
+    if detail == 0 or h < 24:
+        draw.set_color(r, g, b)
+        rv(x, top, h)
+        return
+
+    if t == 1:
+        # bricks: mortar underneath, offset rows of bricks on top
+        n = 2
+        if detail == 2 and h >= 48:
+            n = 4
+        draw.set_color(r * 45 // 100, g * 45 // 100, b * 45 // 100)
+        rv(x, top, h)
+        for k in range(n):
+            y0 = top + h * k // n
+            y1 = top + h * (k + 1) // n
+            u = f * 4 + 0.5 * (k & 1)
+            iu = int(u)
+            if u - iu < 0.1:
+                continue
+            m = 94 + ((iu * 7 + k * 5) % 4) * 4
+            draw.set_color(r * m // 100, g * m // 100, b * m // 100)
+            rv(x, y0 + 1, y1 - y0 - 1)
+    elif t == 2:
+        # tech panels with a groove and a status light
+        if f < 0.06 or f > 0.94:
+            draw.set_color(r * 55 // 100, g * 55 // 100, b * 55 // 100)
+            rv(x, top, h)
+            return
+        draw.set_color(r, g, b)
+        rv(x, top, h)
+        if 0.1 < f < 0.9:
+            setc((r, g, b), 125)
+            rv(x, top + h * 18 // 100, h * 64 // 100)
+            draw.set_color(r * 55 // 100, g * 55 // 100, b * 55 // 100)
+            rv(x, top + h * 49 // 100, max(1, h // 40))
+            if detail == 2 and 0.46 < f < 0.54:
+                draw.set_color(90, 255, 230)
+                rv(x, top + h * 26 // 100, max(2, h // 18))
+    elif t == 3:
+        # cracked rock with glowing veins
+        m = 100 - (int(f * 10) % 3) * 12
+        draw.set_color(r * m // 100, g * m // 100, b * m // 100)
+        rv(x, top, h)
+        if detail == 2:
+            draw.set_color(r * 55 // 100, g * 55 // 100, b * 55 // 100)
+            rv(x, top + h * 78 // 100, h * 22 // 100)
+        if int(f * 16) % 7 == 0:
+            draw.set_color(255, 110, 30)
+            rv(x, top + h * 20 // 100, h * 50 // 100)
+    elif t == 4:
+        # stone dripping slime
+        draw.set_color(r, g, b)
+        rv(x, top, h)
+        dr = (int(f * 12) % 3 + 1) * h // 10
+        draw.set_color(r * 130 // 100, min(255, g + 90), b * 130 // 100)
+        rv(x, top, dr)
+        if detail == 2:
+            draw.set_color(r * 55 // 100, g * 55 // 100, b * 55 // 100)
+            rv(x, top + h * 82 // 100, h * 18 // 100)
+    elif t >= 5 and t <= 7:
+        # door: frame, centre bar, lamp and handle
+        if f < 0.07 or f > 0.93:
+            draw.set_color(r * 40 // 100, g * 40 // 100, b * 40 // 100)
+            rv(x, top, h)
+            return
+        draw.set_color(r, g, b)
+        rv(x, top, h)
+        setc((r, g, b), 150)
+        rv(x, top + h * 45 // 100, max(2, h // 14))
+        draw.set_color(LAMP[t][0], LAMP[t][1], LAMP[t][2])
+        rv(x, top + h * 8 // 100, max(2, h // 16))
+        if detail == 2 and 0.78 < f < 0.86:
+            draw.set_color(230, 230, 230)
+            rv(x, top + h * 48 // 100, h // 10)
+    elif t == 8:
+        # iron gate
+        if (f * 8) % 1.0 < 0.5:
+            draw.set_color(r * 150 // 100, g * 150 // 100, b * 150 // 100)
+        else:
+            draw.set_color(r * 40 // 100, g * 40 // 100, b * 40 // 100)
+        rv(x, top, h)
+        if detail == 2:
+            draw.set_color(r * 150 // 100, g * 150 // 100, b * 150 // 100)
+            rv(x, top + h * 28 // 100, max(1, h // 24))
+            rv(x, top + h * 68 // 100, max(1, h // 24))
+    else:
+        # switch: wall with a dark plate and a lamp
+        draw.set_color(r, g, b)
+        rv(x, top, h)
+        if 0.3 < f < 0.7:
+            draw.set_color(30, 30, 34)
+            rv(x, top + h * 30 // 100, h * 40 // 100)
+            if t == 9:
+                draw.set_color(255, 60, 60)
+            else:
+                draw.set_color(60, 255, 90)
+            rv(x, top + h * 42 // 100, h * 16 // 100)
+
+
+def draw_world():
+    draw_flat()
+
+    lb = shoot_flash
+    if boom > lb:
+        lb = boom
+    lb = lb * 12
 
     for i in range(RAYS):
         co = COSO[i]
@@ -487,30 +859,24 @@ def draw_world():
             d = 0.1
         depths[i] = d
 
-        h = int(100 / d)
-        if h > 205:
-            h = 205
-        top = MID - h // 2
-        bot = MID + h // 2
-        if top < VIEW_TOP:
-            top = VIEW_TOP
-        if bot > VIEW_BOT:
-            bot = VIEW_BOT
+        h = int(WALLH / d)
+        if h > 420:
+            h = 420
+        top = hz - h // 2
 
-        shade = int(190 / (1 + d * 0.18))
+        sh = int(190 / (1 + d * 0.18))
         if side:
-            shade = shade * 18 // 25
+            sh = sh * 18 // 25
         if f < 0.05 or f > 0.95:
-            shade = shade * 2 // 3
-        if shade < 18:
-            shade = 18
-        elif shade > 220:
-            shade = 220
+            sh = sh * 2 // 3
+        if lb and d < 8:
+            sh += int(lb * (8 - d) / 8)
+        if sh < 18:
+            sh = 18
+        elif sh > 235:
+            sh = 235
 
-        wc = WRGB[t]
-        draw.set_color(shade * wc[0] // 100, shade * wc[1] // 100,
-                       shade * wc[2] // 100)
-        draw.fill_rect(i * STRIP, top, STRIP, bot - top)
+        wall_strip(i * STRIP, top, h, t, sh, f)
 
     draw_acid()
     draw_exit()
@@ -533,9 +899,9 @@ def draw_world():
 
 
 def draw_acid():
-    # flat green puddles on the floor
-    for hz in HZL:
-        r = project(hz[0], hz[1])
+    # bubbling green puddles on the floor
+    for hp in HZL:
+        r = project(hp[0], hp[1])
         if r is None:
             continue
         pd = r[0]
@@ -557,17 +923,22 @@ def draw_acid():
             ir = RAYS - 1
         if depths[il] < pd or depths[ir] < pd:
             continue
-        y1 = MID + int(50 / (pd + 0.5))
+        y1 = hz + int(FLH / (pd + 0.5))
         far = pd - 0.5
         if far < 0.3:
             far = 0.3
-        y2 = MID + int(50 / far)
+        y2 = hz + int(FLH / far)
         if y2 > VIEW_BOT - 1:
             y2 = VIEW_BOT - 1
         if y2 - y1 < 2:
             continue
-        draw.set_color(60, 210, 40)
+        draw.set_color(46, 160, 34)
         draw.fill_rect(sx - w // 2, y1, w, y2 - y1)
+        if detail > 0:
+            draw.set_color(110, 240, 70)
+            ph = (frame // 3 + int(hp[0] * 3)) % 4
+            draw.fill_rect(sx - w // 2 + w * (ph + 1) // 6, y1 + (y2 - y1) // 3,
+                           max(2, w // 10), max(1, (y2 - y1) // 4))
 
 
 def draw_exit():
@@ -576,27 +947,29 @@ def draw_exit():
         return
     pd = r[0]
     sx = r[1]
-    h = int(70 / pd)
-    if h > 80:
-        h = 80
-    w = int(16 / pd)
-    if w < 3:
-        w = 3
-    top = MID - h
-    bot = MID + h // 2
-    if top < VIEW_TOP + 1:
-        top = VIEW_TOP + 1
-    if bot > VIEW_BOT - 1:
-        bot = VIEW_BOT - 1
+    h = int(0.7 * WALLH / pd)
+    w = int(24 / pd)
+    if w < 4:
+        w = 4
+    fy = hz + int(FLH / pd)
+    top = fy - h
     if boss_alive():
-        draw.set_color(160, 40, 40)
+        c = (170, 40, 40)
     else:
-        draw.set_color(20, 230, 40)
-    draw.fill_rect(sx - w // 2, top, w, bot - top)
+        c = (30, 230, 60)
+    # glowing doorway
+    setc(c, 45)
+    cfill(sx - w, top - 2, w * 2, h + 2, (0, W))
+    setc(c)
+    cfill(sx - w * 2 // 3, top, w * 4 // 3, h, (0, W))
+    if not boss_alive():
+        draw.set_color(220, 255, 230)
+        cfill(sx - w // 5, top + h // 5, max(2, w * 2 // 5), h * 3 // 5, (0, W))
 
 
 def draw_pickups():
-    for p in pickups:
+    for idx in range(len(pickups)):
+        p = pickups[idx]
         if not p[3]:
             continue
         r = project(p[0], p[1])
@@ -604,104 +977,216 @@ def draw_pickups():
             continue
         pd = r[0]
         sx = r[1]
+        u = WALLH / pd
+        k = p[2]
+        hh = int(u * 0.13)
+        if hh < 3:
+            hh = 3
+        ww = hh * 3 // 2
+        fy = hz + int(FLH / pd)
+        if k in "ybrSCR":
+            fy -= int(u * 0.05) + int(math.sin((frame + idx * 5) * 0.2) * u * 0.02)
+        x0 = sx - ww // 2
+        y0 = fy - hh
+        v = (0, W)
 
-        if p[2] in "SCRybr":
-            size = int(20 / pd)
-            lim = 16
+        if k == "H":
+            draw.set_color(36, 170, 70)
+            cfill(x0, y0, ww, hh, v)
+            draw.set_color(240, 240, 240)
+            cfill(x0 + ww * 38 // 100, y0 + hh * 15 // 100,
+                  max(1, ww * 24 // 100), hh * 70 // 100, v)
+            cfill(x0 + ww * 18 // 100, y0 + hh * 38 // 100,
+                  ww * 64 // 100, max(1, hh * 24 // 100), v)
+        elif k == "V":
+            draw.set_color(40, 150, 140)
+            cfill(x0, y0 + hh // 4, ww, hh * 3 // 4, v)
+            draw.set_color(70, 205, 190)
+            cfill(x0 - ww // 8, y0, ww * 5 // 4, hh // 3, v)
+            draw.set_color(25, 100, 95)
+            cfill(x0 + ww * 40 // 100, y0 + hh // 3, max(1, ww // 5),
+                  hh * 2 // 3, v)
+        elif k == "A":
+            draw.set_color(150, 150, 160)
+            cfill(x0, y0 + hh // 3, ww, hh * 2 // 3, v)
+            draw.set_color(230, 190, 60)
+            cfill(x0 + ww // 8, y0, ww * 3 // 4, hh // 3, v)
+        elif k == "B":
+            draw.set_color(210, 50, 40)
+            cfill(x0 + ww // 6, y0, ww // 3, hh, v)
+            cfill(x0 + ww * 55 // 100, y0, ww // 3, hh, v)
+            draw.set_color(230, 190, 60)
+            cfill(x0 + ww // 6, y0 + hh * 3 // 4, ww // 3, max(1, hh // 4), v)
+            cfill(x0 + ww * 55 // 100, y0 + hh * 3 // 4, ww // 3,
+                  max(1, hh // 4), v)
+        elif k == "X":
+            draw.set_color(200, 60, 50)
+            cfill(x0 + ww * 35 // 100, y0, ww * 30 // 100, hh, v)
+            draw.set_color(160, 160, 170)
+            cfill(x0 + ww * 35 // 100, y0 - hh // 5, ww * 30 // 100,
+                  max(1, hh // 5), v)
+            draw.set_color(90, 40, 40)
+            cfill(x0 + ww * 20 // 100, y0 + hh * 3 // 4, ww * 60 // 100,
+                  max(1, hh // 4), v)
+        elif k == "y" or k == "r" or k == "b":
+            if k == "y":
+                draw.set_color(255, 220, 50)
+            elif k == "r":
+                draw.set_color(255, 50, 50)
+            else:
+                draw.set_color(80, 150, 255)
+            q = hh * 55 // 100
+            cfill(x0, y0, q, q, v)
+            cfill(x0 + q * 7 // 10, y0 + q // 3, ww * 70 // 100,
+                  max(1, q // 3), v)
+            cfill(x0 + ww * 80 // 100, y0 + q // 3, max(1, q // 3),
+                  q * 7 // 10, v)
+            draw.set_color(20, 20, 24)
+            cfill(x0 + q // 3, y0 + q // 3, max(1, q // 3), max(1, q // 3), v)
         else:
-            size = int(14 / pd)
-            lim = 12
-        if size < 2:
-            size = 2
-        elif size > lim:
-            size = lim
-
-        c = PCOL[p[2]]
-        draw.set_color(c[0], c[1], c[2])
-        draw.fill_rect(sx - size // 2, MID + int(10 / pd) - size // 2,
-                       size, size)
+            # weapon pickups: a gun silhouette
+            draw.set_color(48, 48, 56)
+            cfill(x0 - ww // 4, y0 + hh // 3, ww * 3 // 2, hh // 3, v)
+            cfill(x0 + ww // 2, y0 + hh * 2 // 3, ww // 4, hh // 3, v)
+            draw.set_color(190, 190, 200)
+            cfill(x0 - ww // 4, y0 + hh // 3, ww * 3 // 2, max(1, hh // 9), v)
+            if k == "R":
+                draw.set_color(210, 60, 40)
+                cfill(x0 - ww // 4, y0 + hh // 4, max(2, ww // 5), hh // 2, v)
+            elif k == "S":
+                draw.set_color(122, 82, 48)
+                cfill(x0 + ww // 8, y0 + hh * 45 // 100, ww // 3,
+                      max(1, hh // 4), v)
 
 
 def draw_enemies():
     vis = []
     for i in range(len(enemies)):
         e = enemies[i]
-        if e[2] <= 0:
-            continue
-        r = project(e[0], e[1])
+        r = proj_raw(e[0], e[1])
         if r is None:
             continue
-        vis.append((r[0], i, r[1]))
+        if e[2] <= 0 and e[10] <= 0:
+            draw_corpse(e, r[0], r[1])
+        else:
+            vis.append((r[0], i, r[1]))
 
     vis.sort()
-
     for n in range(len(vis) - 1, -1, -1):
-        pd = vis[n][0]
-        e = enemies[vis[n][1]]
-        sx = vis[n][2]
-        et = e[6]
-        T = ET[et]
-        bc = T[9]
-        hc = T[10]
-        hit = e[5] > 0
+        draw_enemy(enemies[vis[n][1]], vis[n][1], vis[n][0], vis[n][2])
 
-        size = int(T[8] / pd)
-        if size < 3:
-            size = 3
-        elif size > 60:
-            size = 60
 
-        top = MID - size
-        bot = MID + size
-        if top < VIEW_TOP + 2:
-            top = VIEW_TOP + 2
-        if bot > VIEW_BOT - 2:
-            bot = VIEW_BOT - 2
+def draw_corpse(e, pd, sx):
+    T = SPR[e[6]]
+    hs = int(T[0] * WALLH / pd)
+    if hs > 420:
+        hs = 420
+    ws = int(hs * T[1])
+    fy = hz + int(FLH / pd)
+    v = vis_span(sx - ws * 6 // 10, sx + ws * 6 // 10, pd)
+    if v is None:
+        return
+    ph = max(2, hs // 14)
+    draw.set_color(110, 10, 10)
+    cfill(sx - ws * 6 // 10, fy - ph, ws * 12 // 10, ph, v)
+    bh = max(2, hs // 9)
+    setc(T[3][1], 90)
+    cfill(sx - ws * 45 // 100, fy - bh - ph // 2, ws * 9 // 10, bh, v)
+    if detail > 0:
+        setc(T[3][0], 80)
+        cfill(sx - ws * 20 // 100, fy - bh - ph // 2, ws * 25 // 100,
+              max(1, bh // 2), v)
 
-        if et == 3:
-            # floating eye: one big body
-            if hit:
-                draw.set_color(255, 150, 150)
-            else:
-                draw.set_color(bc[0], bc[1], bc[2])
-            draw.fill_rect(sx - size // 2, top + size // 3,
-                           size, bot - top - size // 2)
-            draw.set_color(255, 230, 60)
-            q = max(2, size // 4)
-            draw.fill_rect(sx - q // 2, MID - q // 2, q, q)
-            draw.set_color(30, 0, 0)
-            draw.fill_rect(sx - size // 3, MID + size // 4,
-                           size * 2 // 3, max(1, size // 8))
-        else:
-            hh = size * 2 // 3
-            if hit:
-                draw.set_color(255, 150, 150)
-            else:
-                draw.set_color(bc[0], bc[1], bc[2])
-            draw.fill_rect(sx - size // 2, top + hh, size, bot - top - hh)
 
-            if hit:
-                draw.set_color(255, 200, 200)
-            else:
-                draw.set_color(hc[0], hc[1], hc[2])
-            draw.fill_rect(sx - size // 4, top, size // 2 + 1, hh)
+def draw_enemy(e, i, pd, sx):
+    T = SPR[e[6]]
+    pal = T[3]
+    hs = int(T[0] * WALLH / pd)
+    if hs > 420:
+        hs = 420
+    if hs < 4:
+        hs = 4
+    ws = int(hs * T[1])
+    gy = hz + int(FLH / pd)
+    fy = gy
+    dying = e[2] <= 0
+    if T[2] > 0:
+        fy -= int(T[2] * WALLH / pd)
+        if not dying:
+            fy += int(math.sin((frame + i * 7) * 0.2) * hs * 0.05)
+    if dying:
+        k = e[10]
+        hs = hs * (k + 3) // 11
+        if T[2] > 0:
+            fy = gy - (fy_hover(T, pd) * k // 8)
+    top = fy - hs
 
-            draw.set_color(255, 200, 40)
-            eye = max(1, size // 8)
-            ey = top + hh // 3
-            draw.fill_rect(sx - size // 6 - eye, ey, eye, eye)
-            draw.fill_rect(sx + size // 6, ey, eye, eye)
+    v = vis_span(sx - ws // 2 - 2, sx + ws // 2 + 2, pd)
+    if v is None:
+        return
 
-            if et == 4:
-                draw.set_color(230, 230, 200)
-                hw = max(1, size // 10)
-                draw.fill_rect(sx - size // 4 - hw, top, hw, hh // 2)
-                draw.fill_rect(sx + size // 4 + 1, top, hw, hh // 2)
+    # shadow under the feet
+    if not dying and detail > 0:
+        setc(th[1], 45)
+        cfill(sx - ws * 4 // 10, gy - max(1, hs // 22), ws * 8 // 10,
+              max(2, hs // 14), v)
 
-        if e[7] > 0:
-            draw.set_color(255, 200, 60)
-            q = max(2, size // 4)
-            draw.fill_rect(sx - q // 2, MID, q, q)
+    if e[5] > 0:
+        pal = []
+        for c in T[3]:
+            pal.append(((c[0] + 255) // 2, (c[1] + 200) // 2, (c[2] + 200) // 2))
+
+    att = e[7] > 0 or e[3] >= 28
+    moving_now = e[11] == 1 and not dying
+    ph = ((frame // 4) + i) & 1
+    lift = hs * 6 // 100
+    arm = hs * 14 // 100
+    far = hs < 30 or detail == 0
+
+    for p in T[4]:
+        tag = p[5]
+        dy = 0
+        if tag == 0:
+            pass
+        elif tag == 1:
+            if moving_now and ph == 0:
+                dy = -lift
+        elif tag == 2:
+            if moving_now and ph == 1:
+                dy = -lift
+        elif tag == 3:
+            if att:
+                dy = -arm
+        elif tag == 4:
+            if not att:
+                continue
+        elif tag == 6:
+            if far:
+                continue
+        x0 = sx + p[0] * ws // 100
+        x1 = sx + p[2] * ws // 100
+        y0 = top + p[1] * hs // 100 + dy
+        y1 = top + p[3] * hs // 100 + dy
+        if x1 <= x0:
+            x1 = x0 + 1
+        if y1 <= y0:
+            y1 = y0 + 1
+        c = pal[p[4]]
+        draw.set_color(c[0], c[1], c[2])
+        cfill(x0, y0, x1 - x0, y1 - y0, v)
+
+    # blood spray when hit
+    if e[5] > 0 and detail > 0:
+        draw.set_color(170, 10, 10)
+        o = (e[5] * 5 + i * 3) % 7
+        q = max(2, hs // 14)
+        cfill(sx - ws // 4 + o * ws // 20, top + hs * 35 // 100, q, q, v)
+        cfill(sx + ws // 6 - o * ws // 24, top + hs * 50 // 100, q, q, v)
+        cfill(sx - ws // 10 + o * ws // 30, top + hs * 25 // 100, q, q, v)
+
+
+def fy_hover(T, pd):
+    return int(T[2] * WALLH / pd)
 
 
 def draw_projs():
@@ -709,18 +1194,48 @@ def draw_projs():
         r = project(p[0], p[1])
         if r is None:
             continue
-        size = int(18 / r[0])
-        if size < 3:
-            size = 3
-        elif size > 16:
-            size = 16
+        u = WALLH / r[0]
+        s = int(u * 0.07)
+        if s < 3:
+            s = 3
+        elif s > 30:
+            s = 30
+        if (frame & 1) == 1:
+            s += 1
         c = PROJC[p[5]]
-        draw.set_color(c[0], c[1], c[2])
-        draw.fill_rect(r[1] - size // 2, MID - size // 2, size, size)
-        q = size // 2
-        if q >= 2:
-            draw.set_color(255, 255, 200)
-            draw.fill_rect(r[1] - q // 2, MID - q // 2, q, q)
+        cy = hz + int(u * 0.15)
+        if p[5] == 9:
+            setc(c)
+            draw.fill_rect(r[1] - s, cy - s, s * 2, s * 2)
+            draw.set_color(70, 70, 80)
+            draw.fill_rect(r[1] - s // 2, cy - s // 2, s, s)
+        else:
+            setc(c, 55)
+            draw.fill_rect(r[1] - s, cy - s, s * 2, s * 2)
+            setc(c)
+            draw.fill_rect(r[1] - s * 2 // 3, cy - s * 2 // 3, s * 4 // 3,
+                           s * 4 // 3)
+            draw.set_color(255, 255, 210)
+            q = max(1, s // 2)
+            draw.fill_rect(r[1] - q // 2, cy - q // 2, q, q)
+
+    # explosions
+    for q in fx:
+        r = project(q[0], q[1])
+        if r is None:
+            continue
+        u = WALLH / r[0]
+        s = int(u * (0.06 + (6 - q[2]) * 0.05))
+        if s < 3:
+            s = 3
+        cy = hz + int(u * 0.1)
+        sx = r[1]
+        draw.set_color(255, 110, 20)
+        draw.fill_rect(sx - s * 2, cy - s * 2, s * 4, s * 4)
+        draw.set_color(255, 200, 60)
+        draw.fill_rect(sx - s * 3 // 2, cy - s * 3 // 2, s * 3, s * 3)
+        draw.set_color(255, 255, 220)
+        draw.fill_rect(sx - s, cy - s, s * 2, s * 2)
 
 
 def draw_weapon():
@@ -728,20 +1243,63 @@ def draw_weapon():
     by = 0
     if bob_on and moving:
         s = math.sin(frame * 0.4)
-        bx = int(s * 4)
-        by = int(abs(s) * 3)
-    by += shoot_flash * 2
+        bx = int(s * 5)
+        by = int(abs(s) * 4)
+    by += shoot_flash * 3
+    if wsw > 0:
+        by += (5 - abs(wsw - 5)) * 14
 
-    if shoot_flash > 0:
-        fy = WFLASH[wp]
-        draw.set_color(255, 220, 90)
-        draw.fill_rect(145 + bx, fy, 29, 25)
-        draw.set_color(255, 255, 220)
-        draw.fill_rect(153 + bx, fy - 12, 13, 18)
+    w = WEAPONS[wp]
+    pal = WPAL[wp]
+    pump = 0
+    if wp == 1 and fire_cd > 4:
+        pump = min(fire_cd - 4, 24 - fire_cd)
+        if pump < 0:
+            pump = 0
 
-    for t in WSPR[wp]:
-        draw.set_color(t[0], t[1], t[2])
-        draw.fill_rect(t[3] + bx, t[4] + by, t[5], t[6])
+    if shoot_flash > 0 and wsw == 0:
+        fx0 = WFL[wp][0] + bx
+        fy0 = WFL[wp][1] + by
+        if wp == 2:
+            fx0 += 10 * ((frame & 1) * 2 - 1)
+        if detail == 0:
+            draw.set_color(255, 220, 90)
+            draw.fill_rect(fx0 - 14, fy0 - 10, 28, 24)
+        else:
+            draw.set_color(255, 140, 30)
+            draw.fill_rect(fx0 - 22, fy0 - 14, 44, 30)
+            draw.set_color(255, 220, 90)
+            draw.fill_rect(fx0 - 14, fy0 - 10, 28, 22)
+            draw.set_color(255, 255, 225)
+            draw.fill_rect(fx0 - 7, fy0 - 6, 14, 12)
+            if detail == 2:
+                draw.set_color(255, 200, 70)
+                draw.fill_rect(fx0 - 32, fy0 - 1, 64, 4)
+                draw.fill_rect(fx0 - 2, fy0 - 24, 4, 50)
+
+    spin = shoot_flash > 0 and wp == 2
+    for t in WPAR[wp]:
+        tag = t[5]
+        if tag == 1 and detail < 1:
+            continue
+        if tag == 2 and detail < 2:
+            continue
+        dy = 0
+        if tag == 3:
+            dy = pump
+        c = pal[t[4]]
+        if tag == 5 or tag == 6:
+            if spin and (frame & 1) == tag - 5:
+                c = pal[1]
+        draw.set_color(c[0], c[1], c[2])
+        draw.fill_rect(t[0] + bx, t[1] + by + dy, t[2], t[3])
+
+    # smoke after a shot
+    if detail > 0 and wsw == 0 and (wp == 0 or wp == 1 or wp == 3):
+        age = w[4] - fire_cd
+        if fire_cd > 0 and age >= 3 and age < 12:
+            draw.set_color(150, 150, 155)
+            draw.fill_rect(WFL[wp][0] - 5 + bx, WFL[wp][1] + by - age * 2, 10, 6)
 
     draw.set_color(240, 240, 220)
     draw.draw_line(154, MID, 164, MID)
@@ -827,7 +1385,7 @@ def draw_hud():
 
 # ======================= GAME LOGIC =======================
 def move_player(forward, side, turn):
-    global px, py, angle, ca, sa
+    global px, py, angle, ca, sa, trav
 
     if turn != 0:
         angle += turn
@@ -835,12 +1393,15 @@ def move_player(forward, side, turn):
         sa = math.sin(angle)
 
     if forward != 0 or side != 0:
+        ox = px
+        oy = py
         dx = ca * forward - sa * side
         dy = sa * forward + ca * side
         if can_stand(px + dx, py):
             px += dx
         if can_stand(px, py + dy):
             py += dy
+        trav += (px - ox) * ca + (py - oy) * sa
 
 
 def hurt_player(d):
@@ -871,7 +1432,11 @@ def hit_enemy(e, dmg):
     if e[2] <= 0:
         kills += 1
         tot_kills += 1
+        e[10] = 8
         set_msg(ET[e[6]][0] + " DOWN")
+        if e[6] == 1:
+            # zombies drop their ammo
+            pickups.append([e[0], e[1], "A", True])
         return
 
     set_msg("HIT!")
@@ -888,6 +1453,30 @@ def hit_enemy(e, dmg):
                 e[0] = nx
             if not solid(e[0], ny):
                 e[1] = ny
+
+
+def explode(x, y):
+    global boom
+
+    boom = 4
+    fx.append([x, y, 6])
+    for e in enemies:
+        if e[2] <= 0:
+            continue
+        dx = e[0] - x
+        dy = e[1] - y
+        dd = math.sqrt(dx * dx + dy * dy)
+        if dd < 1.6:
+            dmg = int(14 * (1 - dd / 1.6))
+            if dmg < 1:
+                dmg = 1
+            hit_enemy(e, dmg)
+    dx = px - x
+    dy = py - y
+    if dx * dx + dy * dy < 1.7:
+        hurt_player(6)
+    else:
+        set_msg("BOOM!")
 
 
 def targets(rad):
@@ -919,12 +1508,15 @@ def auto_switch():
 
 
 def next_weapon():
-    global wp
+    global wnew, wsw, fire_cd
+    if wsw > 0:
+        return
     for i in range(1, 5):
         n = (wp + i) % 4
         if have[n]:
-            wp = n
-            set_msg(WEAPONS[n][0])
+            wnew = n
+            wsw = 10
+            fire_cd = 12
             return
 
 
@@ -943,36 +1535,13 @@ def try_fire():
     ammo[at] -= 1
     fire_cd = w[4]
     shoot_flash = 3
-    hits = targets(w[3])
 
     if w[7] > 0:
-        # rocket: explodes on the first enemy or wall
-        if hits:
-            e = enemies[hits[0][1]]
-            ix = e[0]
-            iy = e[1]
-        else:
-            d = cast(ca, sa)[0] - 0.1
-            ix = px + ca * d
-            iy = py + sa * d
-        for e in enemies:
-            if e[2] <= 0:
-                continue
-            ddx = e[0] - ix
-            ddy = e[1] - iy
-            dd = math.sqrt(ddx * ddx + ddy * ddy)
-            if dd < w[7]:
-                dmg = int(w[2] * (1 - dd / w[7]))
-                if dmg < 1:
-                    dmg = 1
-                hit_enemy(e, dmg)
-        ddx = px - ix
-        ddy = py - iy
-        if ddx * ddx + ddy * ddy < 1.7:
-            hurt_player(6)
-        else:
-            set_msg("BOOM!")
+        # rocket: a real projectile that explodes on a wall or demon
+        projs.append([px + ca * 0.35, py + sa * 0.35, ca * 0.4, sa * 0.4,
+                      0, 9, 45])
     else:
+        hits = targets(w[3])
         n = 0
         for h in hits:
             if n >= w[6]:
@@ -1079,6 +1648,19 @@ def update_projs():
         p[0] += p[2]
         p[1] += p[3]
         p[6] -= 1
+        if p[5] == 9:
+            # the player's rocket
+            hit = False
+            for e in enemies:
+                if e[2] > 0:
+                    if -0.45 < e[0] - p[0] < 0.45:
+                        if -0.45 < e[1] - p[1] < 0.45:
+                            hit = True
+                            break
+            if hit or p[6] <= 0 or solid(p[0], p[1]):
+                explode(p[0] - p[2] * 0.5, p[1] - p[3] * 0.5)
+                projs.pop(i)
+            continue
         dx = p[0] - px
         dy = p[1] - py
         if dx * dx + dy * dy < 0.16:
@@ -1092,12 +1674,15 @@ def update_enemies():
     for i in range(len(enemies)):
         e = enemies[i]
         if e[2] <= 0:
+            if e[10] > 0:
+                e[10] -= 1
             continue
 
         if e[5] > 0:
             e[5] -= 1
         if e[7] > 0:
             e[7] -= 1
+        e[11] = 0
 
         T = ET[e[6]]
         dx = px - e[0]
@@ -1175,6 +1760,7 @@ def update_enemies():
                 e[0] = nx
             if not solid(e[0], ny):
                 e[1] = ny
+            e[11] = 1
 
         # keep demons from stacking on each other
         if (frame + i) % 2 == 0:
@@ -1279,9 +1865,10 @@ def collect_pickups():
 
 def load_level(n):
     global G, HZ, HZL, DYN, DF, MW, MH, STEPS, EX, EY, enemies, pickups
-    global projs, th, px, py, angle, ca, sa, kills, total, keys, cruise
+    global projs, fx, th, px, py, angle, ca, sa, kills, total, keys, cruise
     global doors_closed, gates_closed, secrets_found, secrets_total
-    global frame, shoot_flash, fire_cd, hurt, acid, acid_t, moving, depths
+    global frame, shoot_flash, boom, fire_cd, hurt, acid, acid_t, moving
+    global depths, hz, trav, wsw
     global MM_RUNS, MMC, MMX, message, msg_t, fcell, fframe
 
     L = LEVELS[n]
@@ -1302,7 +1889,7 @@ def load_level(n):
         hrow = []
         for x in range(MW):
             c = rows[y][x]
-            hz = False
+            hzf = False
             if c == "0":
                 v = 0
             elif c == "E":
@@ -1311,7 +1898,7 @@ def load_level(n):
                 EY = y
             elif c == "~":
                 v = 0
-                hz = True
+                hzf = True
                 HZL.append((x + 0.5, y + 0.5))
             else:
                 v = MC[c]
@@ -1324,7 +1911,7 @@ def load_level(n):
                 elif v >= 11:
                     secrets_total += 1
             row.append(v)
-            hrow.append(hz)
+            hrow.append(hzf)
         G.append(row)
         HZ.append(hrow)
         DF.append([999] * MW)
@@ -1351,14 +1938,17 @@ def load_level(n):
         MMC = 2
     MMX = W - MW * MMC - 3
 
+    # enemy: x, y, hp, attack timer, awake, hurt flash, type, fire flash,
+    #        sees player, stagger, death timer, walking
     enemies = []
     for s in L[3]:
         enemies.append([s[0], s[1], ET[s[2]][1], 0, False, 0, s[2], 0,
-                        False, 0])
+                        False, 0, 0, 0])
     pickups = []
     for s in L[4]:
         pickups.append([s[0], s[1], s[2], True])
     projs = []
+    fx = []
 
     px = L[2][0]
     py = L[2][1]
@@ -1373,11 +1963,15 @@ def load_level(n):
     cruise = False
     frame = 0
     shoot_flash = 0
+    boom = 0
     fire_cd = 0
+    wsw = 0
     hurt = 0
     acid = 0
     acid_t = 0
     moving = False
+    hz = MID
+    trav = 0.0
     fcell = (-1, -1)
     fframe = -99
     depths = [MAX_DIST] * RAYS
@@ -1491,15 +2085,15 @@ def how_to():
         "MOVE STYLE CRUISE: UP TOGGLES",
         "AUTORUN SO YOU CAN TURN+SHOOT"], "HOW TO PLAY 1/2")
     info_screen([
-        "GREEN=HEALTH  TEAL=ARMOR",
-        "SILVER/ORANGE/RED=AMMO",
-        "WHITE=NEW WEAPON",
-        "YELLOW/RED/BLUE KEYS OPEN",
-        "MATCHING DOORS",
+        "GREEN CROSS=HEALTH TEAL=ARMOR",
+        "BOXES=AMMO  GUNS=NEW WEAPONS",
+        "KEYS OPEN MATCHING DOORS",
         "GREEN PUDDLES BURN YOU",
         "FIREBALLS CAN BE DODGED",
-        "STRAFE SIDEWAYS TO AVOID",
-        "SOME WALLS HIDE SECRETS"], "HOW TO PLAY 2/2")
+        "ROCKETS FLY AND EXPLODE:",
+        "DON'T FIRE AT NEARBY WALLS",
+        "ZOMBIES DROP AMMO",
+        "QUALITY SETS THE DETAIL LEVEL"], "HOW TO PLAY 2/2")
 
 
 def capture_key(i):
@@ -1578,7 +2172,7 @@ def settings_menu():
                 "MOVE STYLE: " + ms,
                 "LEFT/RIGHT: " + sk,
                 "MINIMAP: " + onoff(show_map),
-                "WEAPON BOB: " + onoff(bob_on),
+                "VIEW BOB: " + onoff(bob_on),
                 "AUTO FIRE: " + onoff(autofire),
                 "CONTROLS...",
                 "BACK"
@@ -1681,8 +2275,8 @@ def level_done(n, last):
 # ======================= MAIN LOOPS =======================
 def play_level():
     # returns 0 = quit to menu, 1 = died, 2 = reached exit
-    global frame, shoot_flash, hurt, message, msg_t, moving, fire_cd
-    global cruise, strafe, acid, acid_t, health
+    global frame, shoot_flash, boom, hurt, message, msg_t, moving, fire_cd
+    global cruise, strafe, acid, acid_t, health, hz, wsw, wp
 
     prev = system.get_key(0)
     queued = 0
@@ -1702,6 +2296,13 @@ def play_level():
         if fire_cd > 0:
             fire_cd -= 1
 
+        # weapon switch animation: lower, swap, raise
+        if wsw > 0:
+            wsw -= 1
+            if wsw == 5:
+                wp = wnew
+                set_msg(WEAPONS[wp][0])
+
         if new:
             if key == KEYS[0]:
                 queued = 8
@@ -1718,11 +2319,12 @@ def play_level():
 
         if queued > 0:
             queued -= 1
-            if fire_cd == 0:
+            if fire_cd == 0 and wsw == 0:
                 queued = 0
                 try_fire()
-        elif key == KEYS[0] and fire_cd == 0 and WEAPONS[wp][5]:
-            try_fire()
+        elif key == KEYS[0] and fire_cd == 0 and wsw == 0:
+            if WEAPONS[wp][5]:
+                try_fire()
 
         # movement
         fwd = 0.0
@@ -1756,7 +2358,12 @@ def play_level():
         moving = fwd != 0 or sd != 0
         move_player(fwd, sd, trn)
 
-        if autofire and fire_cd == 0 and frame % 3 == 0:
+        if bob_on and moving:
+            hz = MID + int(math.sin(frame * 0.45) * 2)
+        else:
+            hz = MID
+
+        if autofire and fire_cd == 0 and wsw == 0 and frame % 3 == 0:
             w = WEAPONS[wp]
             if ammo[w[1]] > 0:
                 t = targets(w[3] * 0.8)
@@ -1766,6 +2373,8 @@ def play_level():
         frame += 1
         if shoot_flash > 0:
             shoot_flash -= 1
+        if boom > 0:
+            boom -= 1
         if hurt > 0:
             hurt -= 1
         if msg_t > 0:
@@ -1775,6 +2384,10 @@ def play_level():
 
         update_enemies()
         update_projs()
+        for q in fx:
+            q[2] -= 1
+        while len(fx) > 0 and fx[0][2] < 0:
+            fx.pop(0)
         collect_pickups()
 
         # acid floors
@@ -1840,7 +2453,7 @@ def campaign(start):
 def main():
     sel = 0
     while True:
-        c = choose("DOOM EVO", ["START GAME", "SELECT LEVEL", "SETTINGS",
+        c = choose("DOOM EVO", ["START GAME", "LEVEL SELECT", "SETTINGS",
                                 "HOW TO PLAY", "QUIT"], sel,
                    "CALCULATOR EDITION")
         if c >= 0:

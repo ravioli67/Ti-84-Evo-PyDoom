@@ -1,8 +1,7 @@
-print("Starting, importing libraries...")
 import math
 import ti_draw as draw
 import ti_system as system
-print("Finished importing libraries")
+
 # ======================= CONSTANTS =======================
 W = 319
 H = 209
@@ -96,9 +95,14 @@ WSPR = [
 ]
 WFLASH = [132, 118, 112, 100]
 
-print("Loaded the variables...")
-
-# levels
+# ======================= LEVELS =======================
+# map chars: 0 floor, 1-4 walls, ~ acid, E exit
+#   Y/R/B yellow/red/blue door   G gate (opened by a switch)   W switch
+#   a/b/c/d secret wall that looks like wall 1/2/3/4 (press USE on it)
+# level = name, map, (x, y, angle), enemies (x, y, type),
+#         pickups (x, y, type), theme (sky, floor, near floor), objective
+# pickups: H health, V armor, A bullets, B shells, X rockets,
+#          y/r/b keys, S shotgun, C chaingun, R rocket launcher
 LEVELS = [
     ("HANGAR", [
         "111111111111",
@@ -212,9 +216,7 @@ LEVELS = [
      "KILL THE BARON, REACH THE EXIT")
 ]
 
-print("Loading levels...")
-
-# variables x1
+# ======================= STATE =======================
 qual = 1
 diff = 1
 turn_i = 2
@@ -288,7 +290,6 @@ MM_RUNS = []
 MMC = 4
 MMX = 268
 
-print("Defined Extra Variables.")
 
 # ======================= HELPERS =======================
 def flip():
@@ -363,7 +364,6 @@ def apply_quality():
         SINO.append(math.sin(a))
     depths = [MAX_DIST] * RAYS
 
-print("Defining functions... 40%")
 
 apply_quality()
 
@@ -383,6 +383,8 @@ def can_stand(x, y):
 
 
 def cast(dx, dy):
+    # DDA raycast from the player. (dx, dy) must be a unit vector.
+    # Returns (distance, side, tile id, position along the wall 0..1)
     if -0.00001 < dx < 0.00001:
         dx = 0.00001
     if -0.00001 < dy < 0.00001:
@@ -429,7 +431,6 @@ def cast(dx, dy):
 
     return MAX_DIST, 0, 1, 0.5
 
-print("Defining functions... 55%")
 
 def project(x, y):
     # screen x and perpendicular distance of a point, or None if hidden
@@ -451,6 +452,8 @@ def project(x, y):
         return None
     return pd, sx
 
+
+# ======================= DRAWING =======================
 def cls():
     draw.set_color(0, 0, 0)
     draw.fill_rect(0, 0, W, H)
@@ -528,7 +531,6 @@ def draw_world():
     draw_hud()
     flip()
 
-print("Defining functions... 75%")
 
 def draw_acid():
     # flat green puddles on the floor
@@ -701,7 +703,6 @@ def draw_enemies():
             q = max(2, size // 4)
             draw.fill_rect(sx - q // 2, MID, q, q)
 
-print("Defining functions... 80%")
 
 def draw_projs():
     for p in projs:
@@ -823,8 +824,7 @@ def draw_hud():
     draw.fill_rect(sx - 1, sy - 1, 3, 3)
     draw.draw_line(sx, sy, sx + int(ca * 5), sy + int(sa * 5))
 
-print("Defining functions... 100%")
-print("Finished section one of defining functions")
+
 # ======================= GAME LOGIC =======================
 def move_player(forward, side, turn):
     global px, py, angle, ca, sa
@@ -1026,7 +1026,6 @@ def use_action():
     else:
         set_msg("NOTHING TO USE")
 
-print("Defined the inventory system")
 
 def build_field():
     # breadth-first distance from the player's tile, used for pathfinding
@@ -1678,7 +1677,10 @@ def level_done(n, last):
         if k == K_ENTER or k == K_BACK:
             return
 
+
+# ======================= MAIN LOOPS =======================
 def play_level():
+    # returns 0 = quit to menu, 1 = died, 2 = reached exit
     global frame, shoot_flash, hurt, message, msg_t, moving, fire_cd
     global cruise, strafe, acid, acid_t, health
 
